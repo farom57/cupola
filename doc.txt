@@ -1,0 +1,10 @@
+Leds:
+
+
+Rouge uniquement: initialisation
+Vert + rouge: attente connexion de l'autre module
+Vert: Pret
+Vert + jaune: Suivi activé
+Vert + jaune clignotant: rotation coupole en cours
+
+
