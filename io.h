@@ -4,9 +4,9 @@
 
 void initIO();
 
-void led_green(bool state);
-void led_yellow(bool state);
-void led_red(bool state);
+void ledG(bool state);
+void ledY(bool state);
+void ledR(bool state);
 
 bool switch_1();
 bool switch_2();

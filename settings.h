@@ -17,7 +17,11 @@
 #define PIN_RX_DATA PIN_A7
 #define PIN_BAT PIN_A5 // A5 = P0_2 = AIN0
 
-#define DEBOUNCE_DELAY 10
+#define CONNECTION_TIMEOUT 300000L
+
+#define DEBOUNCE_DELAY 50
+
+
 
 void defaultSettings();
 

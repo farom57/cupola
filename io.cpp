@@ -49,15 +49,15 @@ void initIO() {
   digitalWrite(LEDB, HIGH);
 }
 
-void led_green(bool state) {
+void ledG(bool state) {
   digitalWrite(PIN_LED1, !state);
 }
 
-void led_yellow(bool state) {
+void ledY(bool state) {
   digitalWrite(PIN_LED2, !state);
 }
 
-void led_red(bool state) {
+void ledR(bool state) {
   digitalWrite(PIN_LED3, !state);
 }
 

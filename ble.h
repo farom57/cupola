@@ -1,7 +1,19 @@
 #ifndef BLE_H
 #define BLE_H
 
-void initBLECentral();
+#include <ArduinoBLE.h>
+
+
+//void initBLECentral();
 void initBLEPeripherial();
+
+void writeMagRaw(float mag_raw[]);
+void writeMagFilt(float mag_filt[]);
+
+void updateSwitches();
+
+void blePeripheralConnectHandler(BLEDevice central);
+
+void blePeripheralDisconnectHandler(BLEDevice central);
 
 #endif
