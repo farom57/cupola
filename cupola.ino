@@ -1,6 +1,4 @@
-// define CUPOLA or MOUNT depending on the module
-#define CUPOLA
-//#define MOUNT
+
 
 #include "cupola.h"
 

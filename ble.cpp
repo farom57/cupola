@@ -1,3 +1,6 @@
+#include "settings.h"
+#ifdef CUPOLA
+
 #include "ble.h"
 #include "io.h"
 #include "cupola.h"
@@ -126,14 +129,14 @@ void initBLEPeripherial() {
 }
 
 void blePeripheralConnectHandler(BLEDevice central){
-  if(mode==ADVERTISE){
+  if(mode==CONNECTION){
     mode=STANDBY;
   }
 }
 
 void blePeripheralDisconnectHandler(BLEDevice central){
   if(mode==STANDBY || mode==ON){
-    mode=ADVERTISE;
+    mode=CONNECTION;
   }
 }
 
@@ -173,3 +176,5 @@ void updateSwitches() {
     btnChar.writeValue(btn());
   }
 }
+
+#endif

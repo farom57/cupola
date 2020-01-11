@@ -1,6 +1,10 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
+// define CUPOLA or MOUNT depending on the module
+#define CUPOLA
+//#define MOUNT
+
 #include "Arduino.h"
 
 // PIN
