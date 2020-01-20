@@ -140,17 +140,17 @@ void v_print(const char msg[], float v[]) {
     printg("%c", msg[i]);
     i++;
   }
-  printg("%7.3f\n", v[0]);
+  printg("%7.3f\n\r", v[0]);
 
   for (int j = 0; j < i; j++) {
     printg(" ");
   }
-  printg("%7.3f\n", v[0]);
+  printg("%7.3f\n\r", v[1]);
 
   for (int j = 0; j < i; j++) {
     printg(" ");
   }
-  printg("%7.3f\n", v[0]);
+  printg("%7.3f\n\r", v[2]);
 }
 
 void m_print(const char msg[], float m[]) {
@@ -161,17 +161,17 @@ void m_print(const char msg[], float m[]) {
     printg("%c", msg[i]);
     i++;
   }
-  printg("%7.3f\t%7.3f\t%7.3f\n", m[0], m[1], m[2]);
+  printg("%7.3f\t%7.3f\t%7.3f\n\r", m[0], m[1], m[2]);
 
   for (int j = 0; j < i; j++) {
     printg(" ");
   }
-  printg("%7.3f\t%7.3f\t%7.3f\n", m[0], m[1], m[2]);
+  printg("%7.3f\t%7.3f\t%7.3f\n\r", m[0], m[1], m[2]);
 
   for (int j = 0; j < i; j++) {
     printg(" ");
   }
-  printg("%7.3f\t%7.3f\t%7.3f\n", m[0], m[1], m[2]);
+  printg("%7.3f\t%7.3f\t%7.3f\n\r", m[0], m[1], m[2]);
 }
 
 void rotx(float angle, float res[]) {

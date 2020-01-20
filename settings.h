@@ -2,8 +2,8 @@
 #define SETTINGS_H
 
 // define CUPOLA or MOUNT depending on the module
-#define CUPOLA
-//#define MOUNT
+//#define CUPOLA
+#define MOUNT
 
 #include "Arduino.h"
 
@@ -21,7 +21,8 @@
 #define PIN_RX_DATA PIN_A7
 #define PIN_BAT PIN_A5 // A5 = P0_2 = AIN0
 
-#define CONNECTION_TIMEOUT 300000L
+#define CONNECTION_KEEPALIVE_TIMEOUT 10000L
+#define CONNECTION_KEEPALIVE_TIMEOUT2 20000L
 
 #define DEBOUNCE_DELAY 50
 

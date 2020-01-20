@@ -6,14 +6,19 @@
 #include "cupola.h"
 #include "utility.h"
 
+long connectionLastAlive = -2147483647L;
+
+BLEDevice central;
+
 // BLE Services
 BLEService batteryService("c3fe2f77-e1c8-4b1c-a0f3-ef88d05031c0");
 BLEService switchService("c3fe2f77-e1c8-4b1c-a0f3-ef88d05031d0");
 BLEService modeService("c3fe2f77-e1c8-4b1c-a0f3-ef88d05031e0");
 BLEService magService("c3fe2f77-e1c8-4b1c-a0f3-ef88d05031f0");
+BLEService aliveService("c3fe2f77-e1c8-4b1c-a0f3-ef88d05031b0");
 
 // BLE Characteristic
-BLECharacteristic batteryLevelChar("c3fe2f77-e1c8-4b1c-a0f3-ef88d05031c0", BLERead | BLENotify, "Not implemented");
+BLECharacteristic batteryLevelChar("c3fe2f77-e1c8-4b1c-a0f3-ef88d05031c1", BLERead | BLENotify, "Not implemented");
 BLEDescriptor batteryLevelDescr("2901", "Battery voltage");
 
 BLEBoolCharacteristic switch1Char("c3fe2f77-e1c8-4b1c-a0f3-ef88d05031d1", BLERead | BLENotify);
@@ -49,6 +54,8 @@ BLEDescriptor magFiltZDescr("2901", "Mag filt Z");
 BLEFloatCharacteristic *magRawChar[3] = {&magRawXChar, &magRawYChar, &magRawZChar};
 BLEFloatCharacteristic *magFiltChar[3] = {&magFiltXChar, &magFiltYChar, &magFiltZChar};
 
+BLELongCharacteristic aliveChar("c3fe2f77-e1c8-4b1c-a0f3-ef88d05031b1", BLERead | BLEWrite);
+BLEDescriptor aliveDescr("2901", "Alive timeout in ms");
 
 void initBLEPeripherial() {
   if (!BLE.begin()) {
@@ -62,6 +69,7 @@ void initBLEPeripherial() {
   BLE.setAdvertisedService(switchService);
   BLE.setAdvertisedService(modeService);
   BLE.setAdvertisedService(magService);
+  BLE.setAdvertisedService(aliveService);
 
   batteryService.addCharacteristic(batteryLevelChar);
   batteryLevelChar.addDescriptor(batteryLevelDescr);
@@ -102,17 +110,22 @@ void initBLEPeripherial() {
   magFiltXChar.addDescriptor(magFiltXDescr);
   magFiltYChar.addDescriptor(magFiltYDescr);
   magFiltZChar.addDescriptor(magFiltZDescr);
-  magRawXChar.writeValue(0);
-  magRawYChar.writeValue(0);
-  magRawZChar.writeValue(0);
-  magFiltXChar.writeValue(0);
-  magFiltYChar.writeValue(0);
-  magFiltZChar.writeValue(0);
+  magRawXChar.writeValue(0.);
+  magRawYChar.writeValue(0.);
+  magRawZChar.writeValue(0.);
+  magFiltXChar.writeValue(0.);
+  magFiltYChar.writeValue(0.);
+  magFiltZChar.writeValue(0.);
+
+  aliveService.addCharacteristic(aliveChar);
+  aliveChar.addDescriptor(aliveDescr);
+
 
   BLE.addService(batteryService);
   BLE.addService(switchService);
   BLE.addService(modeService);
   BLE.addService(magService);
+  BLE.addService(aliveService);
 
   BLE.setEventHandler(BLEConnected, blePeripheralConnectHandler);
   BLE.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
@@ -122,21 +135,47 @@ void initBLEPeripherial() {
   magRawXChar.setEventHandler(BLERead, magReadHandler);
   magRawYChar.setEventHandler(BLERead, magReadHandler);
   magRawZChar.setEventHandler(BLERead, magReadHandler);
+  aliveChar.setEventHandler(BLERead, connectionAliveHandler);
 
   BLE.advertise();
 
   Serial.println("Bluetooth device active, waiting for connections...");
+
 }
 
-void blePeripheralConnectHandler(BLEDevice central){
-  if(mode==CONNECTION){
-    mode=STANDBY;
+bool connectBLE() {
+  central = BLE.central();
+  if (central && central.connected()) {
+    printg("Connected:");
+    printg("  address: %s\n\r", central.address());
+    printg("  name: %s\n\r", central.deviceName());
+    aliveChar.writeValue(CONNECTION_KEEPALIVE_TIMEOUT2);
+    connectionLastAlive = millis();
+    return true;
   }
+  return false;
 }
 
-void blePeripheralDisconnectHandler(BLEDevice central){
-  if(mode==STANDBY || mode==ON){
-    mode=CONNECTION;
+
+void disconnectBLE() {
+  printg("Disconnected\n\r");
+  central.disconnect();
+  printg("Rebooting\n\r");
+  wait(0.1);
+  system_reset();
+
+}
+
+void blePeripheralConnectHandler(BLEDevice central) {
+  if (mode == CONNECTION) {
+    mode = STANDBY;
+  }
+  connectionLastAlive = millis();
+}
+
+void blePeripheralDisconnectHandler(BLEDevice central) {
+  if (mode == STANDBY || mode == ON) {
+    mode = CONNECTION;
   }
 }
 
@@ -147,7 +186,7 @@ void writeMagRaw(float mag_raw[]) {
   for (int i = 0; i < 3; i++) {
     magRawChar[i]->writeValue(mag_raw[i]);
   }
-  printg("Mag_raw: %s\n", buf);
+  printg("Mag_raw: %s\n\r", buf);
 }
 void writeMagFilt(float mag_filt[]) {
   char buf[32];
@@ -156,7 +195,7 @@ void writeMagFilt(float mag_filt[]) {
   for (int i = 0; i < 3; i++) {
     magFiltChar[i]->writeValue(mag_filt[i]);
   }
-  printg("Mag_filt: %s\n", buf);
+  printg("Mag_filt: %s\n\r", buf);
 }
 
 void updateSwitches() {
@@ -176,5 +215,32 @@ void updateSwitches() {
     btnChar.writeValue(btn());
   }
 }
+
+void connectionAliveHandler(BLEDevice central, BLECharacteristic characteristic) {
+  connectionLastAlive = millis();
+  printg("alive millis=%ld\n\r", millis());
+}
+
+bool isAlive() {
+
+  if (!central.connected()) {
+    printg("isAlive(): not connected\n\r");
+    return false;
+  }
+  if (switch_1()) {
+    //printg("isAlive(): Switch 1 ON --> connection timeout disabled\n\r");
+    return true;
+  }
+  //printg("isAlive(): millis=%ld connectionLastAlive=%ld timeout=%ld\n\r", millis(), connectionLastAlive, aliveChar.value());
+  if (millis() - connectionLastAlive < aliveChar.value()) {
+    //printg("  OK\n\r");
+    return true;
+  } else {
+    printg("  TIMEOUT\n\r");
+    return false;
+  }
+}
+
+
 
 #endif

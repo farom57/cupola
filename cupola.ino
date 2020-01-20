@@ -1,5 +1,3 @@
-
-
 #include "cupola.h"
 
 int main(void)

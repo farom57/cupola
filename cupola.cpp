@@ -19,14 +19,8 @@ float mag_raw[3];
 float mag_smooth[3];
 float mag_filt[3];
 float mag_filt_remote[3];
-float acc_raw[3];
-float acc_smooth[3];
 float acc_filt[3];
-#ifdef CUPOLA
-BLEDevice central;
-#else
-BLEDevice peripheral;
-#endif
+
 
 void setup() {
 
@@ -51,17 +45,17 @@ void setup() {
   }
   stopIMU();
   initBLEPeripherial();
-  
+
 #else
   initIMUMagAcc();
-  if (!testIMUMagAcc()) {
+  if (!testIMUMag() || !testIMUAcc()) {
     Serial.println("Failed to initialize IMU!");
     digitalWrite(LEDG, LOW);
     while (1);
   }
   stopIMU();
   initBLECentral();
-  
+
 #endif
 
   mode = CONNECTION;
@@ -70,19 +64,11 @@ void setup() {
 
 }
 
+
 void loop() {
-  static long connectionLastAlive = 2147483647L;
+
   // --- mode transitions ---
-  // transition from INIT to CONNECTION is managed in setup()
-  if (mode == CONNECTION && central && central.connected()) {
-    mode = STANDBY;
-  }
-  // TODO: transition to SLEEP
-  if (mode == STANDBY && (!central.connected() || millis() > connectionLastAlive + CONNECTION_TIMEOUT)) {
-    mode = CONNECTION;
-    //TODO: force disconnect
-  }
-  // transitions between STANDBY and ON are managed in modeChangedHandler()
+
 
   // --- mode operation ---
   if (mode == CONNECTION) {
@@ -90,8 +76,8 @@ void loop() {
     ledY(false);
     ledR(true);
 
-    central = BLE.central();
-    if (central && central.connected()) {
+
+    if (connectBLE()) {
       mode = STANDBY;
       return;
     }
@@ -99,49 +85,47 @@ void loop() {
     wait(1.);
   }
 
-  if (mode == STANDBY) {
+  if (mode >= STANDBY) {
     ledG(true);
-    ledY(false);
+    ledY(mode == ON);
     ledR(false);
 
-    if (!central.connected()) {
-      mode = CONNECTION;
+    //central.poll();
+
+    if (!isAlive()) {
+      disconnectBLE(); // RESET !
       return;
     }
-    if (millis() > connectionLastAlive + CONNECTION_TIMEOUT) {
-      mode = CONNECTION;
-      BLE.disconnect();
-      return;
+#ifdef CUPOLA
+    updateSwitches();
+    if (mode == ON) {
+      updateMag();
+    }
+#else
+    if (mode == ON) {
+      readRemoteMag(mag_filt_remote);
+      readMagConv(mag_filt);
+      readAccConv(acc_filt);
+      printg("Time = %ld\n\r", millis());
+      v_print("mag_filt_remote", mag_filt_remote);
+      v_print("mag_filt", mag_filt);
+      v_print("acc_filt", acc_filt);
+      printg("\n\r");
     }
 
-    updateSwitches();
+    if (btn_chg() & !btn()) { // BTN released
+      toggleMode();
+      return;
+    }
+#endif
 
     wait(0.1);
   }
 
-  if (mode == ON) {
-    ledG(true);
-    ledY(true);
-    ledR(false);
-
-    if (!central.connected()) {
-      mode = CONNECTION;
-      return;
-    }
-    if (millis() > connectionLastAlive + CONNECTION_TIMEOUT) {
-      mode = CONNECTION;
-      BLE.disconnect();
-      return;
-    }
-
-    updateMag();
-    updateSwitches();
-
-
-    wait(0.05);
-  }
 
 }
+
+// Cupola
 
 void modeChangedHandler(BLEDevice central, BLECharacteristic characteristic) {
   uint8_t requestedMode;
@@ -180,4 +164,29 @@ void magReadHandler(BLEDevice central, BLECharacteristic characteristic) {
   writeMagRaw(mag_raw);
   writeMagFilt(mag_filt);
 
+}
+
+
+// Mount
+
+void btnChangedHandler(BLEDevice central, BLECharacteristic characteristic) {
+  uint8_t val;
+  characteristic.readValue(val);
+  if (!val) {
+    printg("Remote button released\n\r");
+    toggleMode();
+  }
+
+}
+
+void toggleMode() {
+  if (mode == STANDBY) {
+    remoteModeON(true);
+    initIMUMagAcc();
+    mode = ON;
+  } else if (mode == ON) {
+    remoteModeON(false);
+    stopIMU();
+    mode = STANDBY;
+  }
 }

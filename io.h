@@ -21,5 +21,6 @@ bool switch_4_chg();
 bool btn_chg();
 
 
+float readTemp();
 
 #endif

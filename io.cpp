@@ -1,6 +1,7 @@
 #include "Arduino.h"
 #include "settings.h"
 #include "io.h"
+#include "nrf_temp.h"
 
 bool oldSwitch1;
 bool oldSwitch2;
@@ -141,4 +142,22 @@ bool btn_chg() {
     }
   }
   return false;
+}
+
+bool tempAvailable(){
+  
+}
+float readTemp(){
+  //nrf_temp_init();
+  //delay(1);
+  //int32_t raw = nrf_temp_read();
+  //return raw*0.25;
+  int raw;
+  NRF_TEMP->TASKS_START = 0x1;
+  while(!NRF_TEMP->EVENTS_DATARDY){}
+  raw = NRF_TEMP->TEMP;
+  NRF_TEMP->EVENTS_DATARDY=0;
+  NRF_TEMP->TASKS_STOP = 0x1;
+  return (float)raw*0.25;
+  
 }
