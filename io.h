@@ -7,6 +7,9 @@ void initIO();
 void ledG(bool state);
 void ledY(bool state);
 void ledR(bool state);
+void ledRYG(bool stateR,bool stateY,bool stateG);
+void ledRGB(bool stateR,bool stateG,bool stateB);
+
 
 bool switch_i(int i);
 bool switch_1();
@@ -21,7 +24,6 @@ bool switch_2_chg();
 bool switch_3_chg();
 bool switch_4_chg();
 bool btn_chg();
-
 
 float readTemp();
 

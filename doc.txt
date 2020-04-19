@@ -1,10 +1,35 @@
 Leds:
+    Rouge uniquement: initialisation
+    Vert + rouge: attente connexion de l'autre module
+    Vert: Pret
+    Vert + jaune: Suivi activé
+    Vert + jaune clignotant: rotation coupole en cours
+Led RGB:
+    Eteint: normal
+    Vert: pb d'initialisation du magnetometre, generalement en cas de champ magnetique inhabituel
+    Rouge: pb d'initialisation de l'accelerometre, le module etait probablement en mouvement lors de l'initialisation
+
+Dip:
+    1: 
+        - OFF=Monture ou Coupole en fonction du DIP 2
+        - ON=Debug
+    2: 
+        - OFF=Monture, BLE central device
+        - ON=Coupole, BLE peripheral device
+        
+Modes de fonctionnement:
+Pour passer d'un mode à l'autre il est necessaire de modifier la position des dip switchs et faire un reset
+
+    Monture:
+    A utiliser pour le module maitre positionné sur la monture. Ce module fonctionne en tant que BLE central device et envoye egalement les ordres à la motorisation de la coupole en 433MHz. 
+
+    Coupole:
+    A utiliser pour le module esclave posé sur la coupole. Ce module fonctionne en tant que BLE peripheral device. Il est interogé par le module monture.
+
+    Debug: 
+    Le mode debug permet de se connecter au module au moyen d'un smartphone ou d'un PC en bluetooth. Applications Android recommandées: NRF Connect et Lightblue. Il est necessaire d'appuyer pour lancer l'initialisation.
+    
+Communication serie à 57600baud
 
 
-Rouge uniquement: initialisation
-Vert + rouge: attente connexion de l'autre module
-Vert: Pret
-Vert + jaune: Suivi activé
-Vert + jaune clignotant: rotation coupole en cours
-
-
+    

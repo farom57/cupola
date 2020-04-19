@@ -17,8 +17,11 @@ void disconnectBLE();                 // Disconnect, working both for peripheral
 void writeMagRaw(float mag_raw[]);    // update Mag Raw characteristic
 void writeMagFilt(float mag_filt[]);  // update Mag Filt characteristic
 void writeAcc(float acc[]);           // update Acc characteristic
+void writeState(enum states val);     // update State characteristic
+enum states readState();              // read State characteristic
 void updateSwitches();                // update switches characteristics
-bool isAlivePeripherial();            // return true if the connection is alive, ignore timeout if switch1 is ON
+bool connectedPeripherial();          // return true if the connection is alive, ignore timeout if switch1 is ON
+
 
 //   -------------------------------
 //   ---   Peripheral handlers   ---

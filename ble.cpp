@@ -18,10 +18,11 @@ BLEDevice remote;
 // BLE Services
 BLEService* batteryService;
 BLEService* switchService;
-BLEService* modeService;
+BLEService* stateService;
 BLEService* magService;
 BLEService* accService;
 BLEService* aliveService;
+// TODO: ajouter temperature
 
 // BLE Characteristic
 BLECharacteristic* batteryLevelChar;
@@ -32,8 +33,8 @@ BLEBoolCharacteristic* switchChar[5];
 BLEDescriptor* switchDescr[5];
 
 // ModeON
-BLEByteCharacteristic* modeONChar;
-BLEDescriptor* modeONDescr;
+BLEByteCharacteristic* stateChar;
+BLEDescriptor* stateDescr;
 
 // Mag & Acc
 BLECharacteristic *magRawStringChar, *magFiltStringChar, *accStringChar;
@@ -60,7 +61,7 @@ BLEDescriptor* aliveDescr;
 // prepare BLE for incomming connections
 void initBLEPeripherial() {
   printg("Starting BLE peripheral/n/r");
-  
+
   // BLE Characteristic
   batteryService = new BLEService(UUID_PREFIX "00");
   batteryLevelChar = new BLECharacteristic(UUID_PREFIX "01", BLERead | BLENotify, "Not implemented");
@@ -86,12 +87,12 @@ void initBLEPeripherial() {
     switchChar[i]->writeValue(switch_i(i));
   }
 
-  modeService = new BLEService(UUID_PREFIX "20");
-  modeONChar = new BLEByteCharacteristic (UUID_PREFIX "21", BLERead | BLEWrite);
-  modeONDescr = new BLEDescriptor ("2901", "Mode ON");
-  modeService->addCharacteristic(*modeONChar);
-  modeONChar->addDescriptor(*modeONDescr);
-  modeONChar->writeValue(false);
+  stateService = new BLEService(UUID_PREFIX "20");
+  stateChar = new BLEByteCharacteristic (UUID_PREFIX "21", BLERead | BLEWrite);
+  stateDescr = new BLEDescriptor ("2901", "Mode ON");
+  stateService->addCharacteristic(*stateChar);
+  stateChar->addDescriptor(*stateDescr);
+  stateChar->writeValue(mode);
 
   magService = new BLEService(UUID_PREFIX "30");
   magRawStringChar = new BLECharacteristic(UUID_PREFIX "31", BLERead, " xxx.xxxxx, xxx.xxxxx, xxx.xxxxx");
@@ -164,7 +165,7 @@ void initBLEPeripherial() {
   aliveDescr = new BLEDescriptor ("2901", "Alive timeout in ms");
   aliveService->addCharacteristic(*aliveChar);
   aliveChar->addDescriptor(*aliveDescr);
-  
+
   if (!BLE.begin()) {
     printg("starting BLE failed!\n\r");
     digitalWrite(LEDB, LOW);
@@ -176,7 +177,7 @@ void initBLEPeripherial() {
 
   BLE.addService(*batteryService);
   BLE.addService(*switchService);
-  BLE.addService(*modeService);
+  BLE.addService(*stateService);
   BLE.addService(*magService);
   BLE.addService(*accService);
   BLE.addService(*aliveService);
@@ -185,12 +186,12 @@ void initBLEPeripherial() {
   BLE.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
   aliveChar->setEventHandler(BLERead, connectionAliveHandler);
 
-  modeONChar->setEventHandler(BLEWritten, modeChangedHandler);
+  stateChar->setEventHandler(BLEWritten, modeChangedHandler);
   magRawStringChar->setEventHandler(BLERead, magReadHandler);
   magRawXChar->setEventHandler(BLERead, magReadHandler);
   magRawYChar->setEventHandler(BLERead, magReadHandler);
   magRawZChar->setEventHandler(BLERead, magReadHandler);
-  
+
   BLE.advertise();
 
   printg("Bluetooth device active, waiting for connections...\n\r");
@@ -248,15 +249,28 @@ void writeMagFilt(float mag_filt[]) {
 
 
 // update Acc characteristic
-void writeAcc(float acc[]){
+void writeAcc(float acc[]) {
   char buf[32];
   snprintf(buf, 32, "%6.2f,%6.2f,%6.2f", acc[0], acc[1], acc[2]);
   accStringChar->writeValue(buf);
   for (int i = 0; i < 3; i++) {
     accChar[i]->writeValue(acc[i]);
   }
-  printg("Acc: %s\n\r", buf);       
+  printg("Acc: %s\n\r", buf);
 }
+
+// update State characteristic
+void writeState(enum states val) {
+  stateChar->writeValue((byte)val);
+}
+
+// read State characteristic
+enum states readState() {
+  return (enum states)stateChar->Value();
+}
+
+
+
 
 
 // update switches characteristics
@@ -279,17 +293,17 @@ void updateSwitches() {
 }
 
 // return true if the connection is alive, ignore timeout if switch1 is ON
-bool isAlivePeripherial(){  
-  if (!remote.connected()) {
-    printg("isAlive(): not connected\n\r");
+bool connectedPeripherial() {
+  if (!central.connected()) {
+    printg("not connected\n\r");
     return false;
   }
-  
+
   if (switch_1()) {
     //printg("isAlive(): Switch 1 ON --> connection timeout disabled\n\r");
     return true;
   }
-  
+
   if (millis() - connectionLastAlive < aliveChar->value()) {
     //printg("  OK\n\r");
     return true;
@@ -312,16 +326,13 @@ bool isAlivePeripherial(){
 // implemented in cupola.cpp, called if the mode property is changed
 //void modeChangedHandler(BLEDevice central, BLECharacteristic characteristic);
 
-     
+
 // implemented in cupola.cpp, called if a mag measurment is requested
 //void magReadHandler(BLEDevice central, BLECharacteristic characteristic);
 
 
 // called when a central device tries to connect
 void blePeripheralConnectHandler(BLEDevice central) {
-  if (mode == CONNECTION) {
-    mode = STANDBY;
-  }
   connectionLastAlive = millis();
   connected_peripheral = true;
 }
@@ -329,10 +340,7 @@ void blePeripheralConnectHandler(BLEDevice central) {
 
 // called when a central close the connection
 void blePeripheralDisconnectHandler(BLEDevice central) {
-  if (mode == STANDBY || mode == ON) {
-    mode = CONNECTION;
-    connected_peripheral = false;
-  }
+  connected_peripheral = false;
 }
 
 
@@ -350,7 +358,7 @@ void connectionAliveHandler(BLEDevice central, BLECharacteristic characteristic)
 //   ------------------------------------
 //   ---   Central public functions   ---
 //   ------------------------------------
-                
+
 
 // Prepare BLE central
 void initBLECentral() {
@@ -395,7 +403,7 @@ bool connectBLECentral() {
     switchChar[2] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "13");
     switchChar[3] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "14");
     switchChar[4] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "15");
-    modeONChar = (BLEByteCharacteristic*)findCharacteristic(UUID_PREFIX "21");
+    stateChar = (BLEByteCharacteristic*)findCharacteristic(UUID_PREFIX "21");
     magRawStringChar = findCharacteristic(UUID_PREFIX "31");
     magRawXChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "32");
     magRawYChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "33");
@@ -422,7 +430,7 @@ bool connectBLECentral() {
     if (
       batteryLevelChar &&
       switchChar[0] && switchChar[1] && switchChar[2] && switchChar[3] && switchChar[4] &&
-      modeONChar &&
+      stateChar &&
       magRawStringChar && magRawXChar && magRawYChar && magRawZChar && magFiltStringChar && magFiltXChar && magFiltYChar && magFiltZChar &&
       accStringChar && accXChar && accYChar && accZChar &&
       aliveChar ) {
@@ -488,7 +496,7 @@ void readRemoteAcc(float res[])  {
 
 // set the mode on the remote device
 void setRemoteModeON(bool on) {
-  modeONChar->writeValue((uint8_t)(on ? ON : STANDBY));
+  stateChar->writeValue((uint8_t)(on ? ON : STANDBY));
 }
 
 
@@ -526,7 +534,7 @@ bool isAliveCentral() {
 
 
 // implemented in cupola.cpp, called if a switch is changed on the peripheral
-//void btnChangedHandler(BLEDevice central, BLECharacteristic characteristic);  
+//void btnChangedHandler(BLEDevice central, BLECharacteristic characteristic);
 
 
 

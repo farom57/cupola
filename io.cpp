@@ -62,6 +62,17 @@ void ledR(bool state) {
   digitalWrite(PIN_LED3, !state);
 }
 
+void ledRYG(bool stateR,bool stateY,bool stateG){
+  digitalWrite(PIN_LED1, !stateG);
+  digitalWrite(PIN_LED2, !stateY);
+  digitalWrite(PIN_LED3, !stateR);
+}
+void ledRGB(bool stateR,bool stateG,bool stateB){
+  digitalWrite(LEDR, !stateR);
+  digitalWrite(LEDG, !stateG);
+  digitalWrite(LEDB, !stateB);
+}
+
 bool switch_1() {
   bool val = !digitalRead(PIN_S1);
   pinMode(PIN_S1, INPUT);
@@ -159,5 +170,4 @@ float readTemp(){
   NRF_TEMP->EVENTS_DATARDY=0;
   NRF_TEMP->TASKS_STOP = 0x1;
   return (float)raw*0.25;
-  
 }

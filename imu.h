@@ -28,6 +28,7 @@ void readAcc(int16_t data[]);
 void readAccConv(float res[]);
 
 void updateMag();
+void updateAcc();
 
 
 

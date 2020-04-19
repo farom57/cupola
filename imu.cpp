@@ -55,6 +55,9 @@ void initIMUMag() {
   readMagConv(mag_raw);
   v_copy(mag_raw, mag_smooth);
   v_copy(mag_raw, mag_filt);
+
+  writeMagRaw(mag_raw);
+  writeMagFilt(mag_filt);
 }
 
 void initIMUMagAcc() {
@@ -236,7 +239,6 @@ int writeRegister(uint8_t slaveAddress, uint8_t address, uint8_t value)
 void updateMag() {
   static int errorCount = 0;
   if (magAvailable()) {
-    digitalWrite(LEDR, HIGH);
     errorCount = 0;
     readMagConv(mag_raw);
     writeMagRaw(mag_raw);
@@ -253,20 +255,38 @@ void updateMag() {
     if (norm(diff) > MAG_CHANGE_THRESHOLD) {
       v_copy(mag_smooth, mag_filt);
       writeMagFilt(mag_filt);
-      printg("FILT: %f %f %f\n\r",mag_filt[0],mag_filt[1],mag_filt[2]);
+      printg("FILT: %f %f %f\n\r", mag_filt[0], mag_filt[1], mag_filt[2]);
     }
 
 
-  } else {
+   } else {
     errorCount++;
-    digitalWrite(LEDR, LOW);
+    
     if (errorCount > 5) {
-      ledR(true);
-      ledY(false);
-      ledG(true);
-      digitalWrite(LEDB, LOW);
+      ledRYB(true, false, false);
+      ledRGB(false, true, false);
       stopIMU();
       mode = INIT;
     }
   }
+}
+
+void updateAcc() {
+  static int errorCount = 0;
+  if (accAvailable()) {
+    errorCount = 0;
+    readAccConv(acc_filt); // filtering is done inside the sensor
+    writeAcc(acc_filt);
+
+  } else {
+    errorCount++;
+    
+    if (errorCount > 5) {
+      ledRYB(true, false, false);
+      ledRGB(true, false, false);
+      stopIMU();
+      mode = INIT;
+    }
+  }
+
 }
