@@ -1,9 +1,9 @@
 #ifndef SETTINGS_H
 #define SETTINGS_H
 
-// define CUPOLA or MOUNT depending on the module
+//<obsolete>define CUPOLA or MOUNT depending on the module
 //#define CUPOLA
-#define MOUNT
+//#define MOUNT
 
 #include "Arduino.h"
 

@@ -15,6 +15,7 @@
 // Global variables
 
 enum modes mode = INIT;
+enum operating_modes operating_mode;
 float mag_raw[3];
 float mag_smooth[3];
 float mag_filt[3];
@@ -77,7 +78,7 @@ void loop() {
     ledR(true);
 
 
-    if (connectBLE()) {
+    if (connectBLE(operating_mode)) {
       mode = STANDBY;
       return;
     }
@@ -103,7 +104,7 @@ void loop() {
     }
 #else
     if (mode == ON) {
-      readRemoteMag(mag_filt_remote);
+      readRemoteMagFilt(mag_filt_remote);
       readMagConv(mag_filt);
       readAccConv(acc_filt);
       printg("Time = %ld\n\r", millis());
@@ -181,11 +182,11 @@ void btnChangedHandler(BLEDevice central, BLECharacteristic characteristic) {
 
 void toggleMode() {
   if (mode == STANDBY) {
-    remoteModeON(true);
+    setRemoteModeON(true);
     initIMUMagAcc();
     mode = ON;
   } else if (mode == ON) {
-    remoteModeON(false);
+    setRemoteModeON(false);
     stopIMU();
     mode = STANDBY;
   }
