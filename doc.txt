@@ -6,8 +6,8 @@ Leds:
     Vert + jaune clignotant: rotation coupole en cours
 Led RGB:
     Eteint: normal
-    Vert: pb d'initialisation du magnetometre, generalement en cas de champ magnetique inhabituel
-    Rouge: pb d'initialisation de l'accelerometre, le module etait probablement en mouvement lors de l'initialisation
+    Vert continu: erreur magnetometre, generalement en cas de champ magnetique inhabituel
+    Rouge continu: erreur accelerometre, le module etait probablement en mouvement lors de l'initialisation
 
 Dip:
     1: 

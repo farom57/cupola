@@ -11,8 +11,8 @@ extern BLEDevice remote;
 //   ---------------------------------------
 //   ---   Peripheral public functions   ---
 //   ---------------------------------------
-void initBLEPeripherial();            // prepare BLE for incomming connections
-bool connectBLEPeripherial();         // Check if a central device is trying to connect and establish the connection. Return true if succesful
+void initBLEPeripheral();            // prepare BLE for incomming connections
+bool connectBLEPeripheral();         // Check if a central device is trying to connect and establish the connection. Return true if succesful
 void disconnectBLE();                 // Disconnect, working both for peripheral and central
 void writeMagRaw(float mag_raw[]);    // update Mag Raw characteristic
 void writeMagFilt(float mag_filt[]);  // update Mag Filt characteristic
@@ -20,13 +20,12 @@ void writeAcc(float acc[]);           // update Acc characteristic
 void writeState(enum states val);     // update State characteristic
 enum states readState();              // read State characteristic
 void updateSwitches();                // update switches characteristics
-bool connectedPeripherial();          // return true if the connection is alive, ignore timeout if switch1 is ON
+bool connectedPeripheral();          // return true if the connection is alive, ignore timeout if switch1 is ON
 
 
 //   -------------------------------
 //   ---   Peripheral handlers   ---
 //   -------------------------------
-void modeChangedHandler(BLEDevice central, BLECharacteristic characteristic);     // implemented in cupola.cpp, called if the mode property is changed
 void magReadHandler(BLEDevice central, BLECharacteristic characteristic);         // implemented in cupola.cpp, called if a mag measurment is requested
 void blePeripheralConnectHandler(BLEDevice central);                              // called when a central device tries to connect
 void blePeripheralDisconnectHandler(BLEDevice central);                           // called when a central close the connection
@@ -41,7 +40,7 @@ bool connectBLECentral();                 // Scan for BLE peripheral and connect
 void readRemoteMagRaw(float mag_raw[]);   // Read Mag Raw on the remote device
 void readRemoteMagFilt(float mag_filt[]); // Read Mag Filt on the remote device
 void readRemoteAcc(float acc[]);          // Read Acc on the remote device
-void setRemoteModeON(bool on);            // set the mode on the remote device
+void setRemoteState(enum states state);   // set the state on the remote device
 bool isAliveCentral();                    // return true if the connection is alive, ignore timeout if debug is true
 
 //   ----------------------------

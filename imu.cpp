@@ -71,9 +71,7 @@ void initIMUMagAcc() {
   // reset
   writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG8, 0x05);
   writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M, 0x0c);
-
   delay(10);
-
   // Acc
   writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG6_XL, 0b1000000); // 238Hz, +/-2g
   writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG7_XL, 0b1010000); // LP cutoff: 238/100 = 2.38Hz
@@ -84,13 +82,15 @@ void initIMUMagAcc() {
   writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M, 0x00); // 4 Gauss
   writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG3_M, 0x00); // Continuous conversion mode
   writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG4_M, 0x08); // high perf
-
+  ledRGB(false, false, true);
   while (!magAvailable()) {}
+  ledRGB(false, false, false);
   readMagConv(mag_raw);
   v_copy(mag_raw, mag_smooth);
   v_copy(mag_raw, mag_filt);
-
+  ledRGB(true, false, false);
   while (!accAvailable()) {}
+  ledRGB(false, false, false);
   readMagConv(acc_filt);
 }
 
@@ -155,7 +155,7 @@ bool magAvailable() {
 }
 
 bool accAvailable() {
-  return readRegister(LSM9DS1_ADDRESS_M, LSM9DS1_STATUS_REG) & 0x01;
+  return readRegister(LSM9DS1_ADDRESS, LSM9DS1_STATUS_REG) & 0x01;
 }
 
 
@@ -263,10 +263,8 @@ void updateMag() {
     errorCount++;
     
     if (errorCount > 5) {
-      ledRYB(true, false, false);
-      ledRGB(false, true, false);
       stopIMU();
-      mode = INIT;
+      mag_error_flag=true;
     }
   }
 }
@@ -282,10 +280,8 @@ void updateAcc() {
     errorCount++;
     
     if (errorCount > 5) {
-      ledRYB(true, false, false);
-      ledRGB(true, false, false);
       stopIMU();
-      mode = INIT;
+      acc_error_flag=true;
     }
   }
 

@@ -4,10 +4,12 @@
 
 
 // Global variables
-enum states {INIT, SLEEP, CONNECTION, STANDBY, ON};
+enum states {ERR, INIT, SLEEP, CONNECTION, STANDBY, ON, MOVE};
 extern enum states state;
 enum operating_modes {TBD, CUPOLA, MOUNT, DEBUG};
 extern enum operating_modes operating_mode;
+extern bool acc_error_flag;
+extern bool mag_error_flag;
 
 extern float mag_raw[3];
 extern float mag_smooth[3];

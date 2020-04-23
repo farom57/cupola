@@ -32,7 +32,7 @@ BLEDescriptor* batteryLevelDescr;
 BLEBoolCharacteristic* switchChar[5];
 BLEDescriptor* switchDescr[5];
 
-// ModeON
+// STATE
 BLEByteCharacteristic* stateChar;
 BLEDescriptor* stateDescr;
 
@@ -59,7 +59,7 @@ BLEDescriptor* aliveDescr;
 
 
 // prepare BLE for incomming connections
-void initBLEPeripherial() {
+void initBLEPeripheral() {
   printg("Starting BLE peripheral/n/r");
 
   // BLE Characteristic
@@ -89,10 +89,10 @@ void initBLEPeripherial() {
 
   stateService = new BLEService(UUID_PREFIX "20");
   stateChar = new BLEByteCharacteristic (UUID_PREFIX "21", BLERead | BLEWrite);
-  stateDescr = new BLEDescriptor ("2901", "Mode ON");
+  stateDescr = new BLEDescriptor ("2901", "State");
   stateService->addCharacteristic(*stateChar);
   stateChar->addDescriptor(*stateDescr);
-  stateChar->writeValue(mode);
+  stateChar->writeValue(state);
 
   magService = new BLEService(UUID_PREFIX "30");
   magRawStringChar = new BLECharacteristic(UUID_PREFIX "31", BLERead, " xxx.xxxxx, xxx.xxxxx, xxx.xxxxx");
@@ -186,7 +186,7 @@ void initBLEPeripherial() {
   BLE.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
   aliveChar->setEventHandler(BLERead, connectionAliveHandler);
 
-  stateChar->setEventHandler(BLEWritten, modeChangedHandler);
+  //stateChar->setEventHandler(BLEWritten, stateChangedHandler);
   magRawStringChar->setEventHandler(BLERead, magReadHandler);
   magRawXChar->setEventHandler(BLERead, magReadHandler);
   magRawYChar->setEventHandler(BLERead, magReadHandler);
@@ -199,7 +199,7 @@ void initBLEPeripherial() {
 
 
 // Check if a central device is trying to connect and establish the connection. Return true if succesful
-bool connectBLEPeripherial() {
+bool connectBLEPeripheral() {
   remote = BLE.central();
   if (remote && remote.connected()) {
     printg("Connected:");
@@ -266,7 +266,7 @@ void writeState(enum states val) {
 
 // read State characteristic
 enum states readState() {
-  return (enum states)stateChar->Value();
+  return (enum states)stateChar->value();
 }
 
 
@@ -293,9 +293,9 @@ void updateSwitches() {
 }
 
 // return true if the connection is alive, ignore timeout if switch1 is ON
-bool connectedPeripherial() {
-  if (!central.connected()) {
-    printg("not connected\n\r");
+bool connectedPeripheral() {
+  if (!remote.connected()) {
+    //printg("not connected\n\r");
     return false;
   }
 
@@ -322,9 +322,6 @@ bool connectedPeripherial() {
 //   ---   Peripheral handlers   ---
 //   -------------------------------
 
-
-// implemented in cupola.cpp, called if the mode property is changed
-//void modeChangedHandler(BLEDevice central, BLECharacteristic characteristic);
 
 
 // implemented in cupola.cpp, called if a mag measurment is requested
@@ -494,11 +491,11 @@ void readRemoteAcc(float res[])  {
 }
 
 
-// set the mode on the remote device
-void setRemoteModeON(bool on) {
-  stateChar->writeValue((uint8_t)(on ? ON : STANDBY));
-}
 
+// set the state on the remote device
+void setRemoteState(enum states state){
+   stateChar->writeValue((uint8_t)state);
+}
 
 // return true if the connection is alive, ignore timeout if debug is true
 bool isAliveCentral() {

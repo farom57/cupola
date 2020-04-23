@@ -62,12 +62,12 @@ void ledR(bool state) {
   digitalWrite(PIN_LED3, !state);
 }
 
-void ledRYG(bool stateR,bool stateY,bool stateG){
+void ledRYG(bool stateR, bool stateY, bool stateG) {
   digitalWrite(PIN_LED1, !stateG);
   digitalWrite(PIN_LED2, !stateY);
   digitalWrite(PIN_LED3, !stateR);
 }
-void ledRGB(bool stateR,bool stateG,bool stateB){
+void ledRGB(bool stateR, bool stateG, bool stateB) {
   digitalWrite(LEDR, !stateR);
   digitalWrite(LEDG, !stateG);
   digitalWrite(LEDB, !stateB);
@@ -101,6 +101,29 @@ bool btn() {
   bool val = !digitalRead(PIN_BTN);
   pinMode(PIN_BTN, INPUT);
   return val;
+}
+
+bool switch_i(int i) {
+  switch (i) {
+    case 0:
+      return btn();
+      break;
+    case 1:
+      return switch_1();
+      break;
+    case 2:
+      return switch_2();
+      break;
+    case 3:
+      return switch_3();
+      break;
+    case 4:
+      return switch_4();
+      break;
+    default:
+      return false;
+      break;
+  }
 }
 
 bool switch_1_chg() {
@@ -155,19 +178,19 @@ bool btn_chg() {
   return false;
 }
 
-bool tempAvailable(){
-  
+bool tempAvailable() {
+
 }
-float readTemp(){
+float readTemp() {
   //nrf_temp_init();
   //delay(1);
   //int32_t raw = nrf_temp_read();
   //return raw*0.25;
   int raw;
   NRF_TEMP->TASKS_START = 0x1;
-  while(!NRF_TEMP->EVENTS_DATARDY){}
+  while (!NRF_TEMP->EVENTS_DATARDY) {}
   raw = NRF_TEMP->TEMP;
-  NRF_TEMP->EVENTS_DATARDY=0;
+  NRF_TEMP->EVENTS_DATARDY = 0;
   NRF_TEMP->TASKS_STOP = 0x1;
-  return (float)raw*0.25;
+  return (float)raw * 0.25;
 }
