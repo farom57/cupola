@@ -100,8 +100,8 @@ void initIMUMagAcc() {
 bool testIMUMag() {
   long start = millis();
   if (readRegister(LSM9DS1_ADDRESS_M, LSM9DS1_WHO_AM_I) != 0x3d) {
-    printg("LSM9DS1_WHO_AM_I!=0x3d\n\r");
-    printg("LSM9DS1_WHO_AM_I=%x\n\r", readRegister(LSM9DS1_ADDRESS_M, LSM9DS1_WHO_AM_I));
+    log_e("LSM9DS1_WHO_AM_I!=0x3d");
+    log_e("LSM9DS1_WHO_AM_I=%x", readRegister(LSM9DS1_ADDRESS_M, LSM9DS1_WHO_AM_I));
     return false;
   }
   while (millis() < start + 100) {
@@ -111,21 +111,21 @@ bool testIMUMag() {
       readMagConv(meas);
       norm = sqrt(meas[0] * meas[0] + meas[1] * meas[1] + meas[2] * meas[2]);
       if (norm > MAG_INIT_MAX || norm < MAG_INIT_MIN) {
-        printg("Mag field out of limits: %f %f %f (norm: %f)\n\r", meas[0], meas[1], meas[2], norm);
+        log_e("Mag field out of limits: %f %f %f (norm: %f)", meas[0], meas[1], meas[2], norm);
         return false;
       }
       return true;
     }
   }
-  printg("Mag measurments not available");
+  log_e("Mag measurments not available");
   return false;
 }
 
 bool testIMUAcc() {
   long start = millis();
   if (readRegister(LSM9DS1_ADDRESS, LSM9DS1_WHO_AM_I) != 0x68) {
-    printg("LSM9DS1_WHO_AM_I!=0x68\n\r");
-    printg("LSM9DS1_WHO_AM_I=%x\n\r", readRegister(LSM9DS1_ADDRESS, LSM9DS1_WHO_AM_I));
+    log_e("LSM9DS1_WHO_AM_I!=0x68");
+    log_e("LSM9DS1_WHO_AM_I=%x", readRegister(LSM9DS1_ADDRESS, LSM9DS1_WHO_AM_I));
     return false;
   }
   while (millis() < start + 100) {
@@ -135,13 +135,13 @@ bool testIMUAcc() {
       readAccConv(meas);
       norm = sqrt(meas[0] * meas[0] + meas[1] * meas[1] + meas[2] * meas[2]);
       if (norm > ACC_INIT_MAX || norm < ACC_INIT_MIN) {
-        printg("Gravity field out of limits: %f %f %f (norm: %f)\n\r", meas[0], meas[1], meas[2], norm);
+        log_e("Gravity field out of limits: %f %f %f (norm: %f)", meas[0], meas[1], meas[2], norm);
         return false;
       }
       return true;
     }
   }
-  printg("Acc measurments not available");
+  log_e("Acc measurments not available");
   return false;
 }
 
@@ -242,20 +242,20 @@ void updateMag() {
     errorCount = 0;
     readMagConv(mag_raw);
     writeMagRaw(mag_raw);
-    //printg("RAW: %f %f %f\n\r",mag_raw[0],mag_raw[1],mag_raw[2]);
+    log_d("RAW: %f %f %f",mag_raw[0],mag_raw[1],mag_raw[2]);
 
     // filtering
     v_lincomb(1.0 - K_SMOOTH, mag_smooth, K_SMOOTH, mag_raw, mag_smooth);
-    //printg("SMOOTH: %f %f %f\n\r", mag_smooth[0], mag_smooth[1], mag_smooth[2]);
+    log_d("SMOOTH: %f %f %f", mag_smooth[0], mag_smooth[1], mag_smooth[2]);
 
     // change detection
     float diff[3];
     v_sub(mag_smooth, mag_filt, diff);
-    //printg("DIFF: %f %f %f (%f)\n\r", diff[0], diff[1], diff[2], norm(diff));
+    log_d("DIFF: %f %f %f (%f)", diff[0], diff[1], diff[2], norm(diff));
     if (norm(diff) > MAG_CHANGE_THRESHOLD) {
       v_copy(mag_smooth, mag_filt);
       writeMagFilt(mag_filt);
-      printg("FILT: %f %f %f\n\r", mag_filt[0], mag_filt[1], mag_filt[2]);
+      log_d("FILT: %f %f %f", mag_filt[0], mag_filt[1], mag_filt[2]);
     }
 
 

@@ -48,7 +48,7 @@ void setup() {
     //IMU test (mag only in CUPOLA mode)
     initIMUMag();
     if (!testIMUMag()) {
-      printg("Failed to initialize Magnetometer!");
+      log_e("Failed to initialize Magnetometer!");
       ledRGB(false, true, false);
       while (1);
     }
@@ -63,12 +63,12 @@ void setup() {
     // IMU test:
     initIMUMagAcc();
     if (!testIMUMag()) {
-      printg("Failed to initialize Magnetometer!");
+      log_e("Failed to initialize Magnetometer!");
       ledRGB(false, true, false);
       while (1);
     }
     if (!testIMUAcc()) {
-      printg("Failed to initialize Accelerometer!");
+      log_e("Failed to initialize Accelerometer!");
       ledRGB(true, false, false);
       while (1);
     }
@@ -83,12 +83,12 @@ void setup() {
     // IMU test
     initIMUMagAcc();
     if (!testIMUMag()) {
-      printg("Failed to initialize Magnetometer in debug mode. Continue");
+      log_e("Failed to initialize Magnetometer in debug mode. Continue");
       ledRGB(false, true, false);
     }
 
     if (!testIMUAcc()) {
-      printg("Failed to initialize Accelerometer in debug mode. Continue");
+      log_e("Failed to initialize Accelerometer in debug mode. Continue");
       ledRGB(true, false, false);
     }
     stopIMU(); // stop the IMU, it is activated on demand to save power
@@ -96,6 +96,7 @@ void setup() {
     state = CONNECTION;
 
   }
+  log_i("Initialisation done");
 
 }
 
@@ -113,13 +114,13 @@ void loop() {
 }
 
 void loop_debug() {
-
+  BLE.poll();
+  
   // state transitions
   // Connection, state change directly to ON in debug mode
   if (state == CONNECTION && connectedPeripheral()) {
     state = STANDBY;
-    initIMUMag();
-    writeState(state);
+    //writeState(state);
   }
   // Disconnection
   if (state > CONNECTION && !connectedPeripheral()) {
@@ -293,6 +294,7 @@ void loop_cupola() {
 //}
 
 void magReadHandler(BLEDevice central, BLECharacteristic characteristic) {
+  log_d("BLE mag read event");
   // if the continuous acquisition is OFF, start the IMU for a single measurment
   if (state == STANDBY) {
     initIMUMag();

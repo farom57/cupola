@@ -3,7 +3,7 @@
 #include "io.h"
 #include "cupola.h"
 #include "utility.h"
-
+#include <ArduinoBLE.h>
 
 
 //   ---   BLE global variables   ---
@@ -51,16 +51,21 @@ BLEDescriptor* aliveDescr;
 
 
 
-
-
 //   ---------------------------------------
 //   ---   Peripheral public functions   ---
 //   ---------------------------------------
 
 
+
 // prepare BLE for incomming connections
 void initBLEPeripheral() {
-  printg("Starting BLE peripheral/n/r");
+  log_i("Starting BLE peripheral");
+
+  if (!BLE.begin()) {
+    log_e("starting BLE failed!");
+    digitalWrite(LEDB, LOW);
+    while (1);
+  }
 
   // BLE Characteristic
   batteryService = new BLEService(UUID_PREFIX "00");
@@ -151,6 +156,9 @@ void initBLEPeripheral() {
   accChar[0] = accXChar;
   accChar[1] = accYChar;
   accChar[2] = accZChar;
+  accDescr[0] = accXDescr;
+  accDescr[1] = accYDescr;
+  accDescr[2] = accZDescr;
   accService->addCharacteristic(*accStringChar);
   accStringChar->addDescriptor(*accStringDescr);
   accStringChar->writeValue(" xxx.xxxxx, xxx.xxxxx, xxx.xxxxx");
@@ -166,11 +174,7 @@ void initBLEPeripheral() {
   aliveService->addCharacteristic(*aliveChar);
   aliveChar->addDescriptor(*aliveDescr);
 
-  if (!BLE.begin()) {
-    printg("starting BLE failed!\n\r");
-    digitalWrite(LEDB, LOW);
-    while (1);
-  }
+
 
   BLE.setLocalName("Cupola");
   BLE.setAdvertisedService(*batteryService);
@@ -181,12 +185,10 @@ void initBLEPeripheral() {
   BLE.addService(*magService);
   BLE.addService(*accService);
   BLE.addService(*aliveService);
-
+  
   BLE.setEventHandler(BLEConnected, blePeripheralConnectHandler);
   BLE.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
   aliveChar->setEventHandler(BLERead, connectionAliveHandler);
-
-  //stateChar->setEventHandler(BLEWritten, stateChangedHandler);
   magRawStringChar->setEventHandler(BLERead, magReadHandler);
   magRawXChar->setEventHandler(BLERead, magReadHandler);
   magRawYChar->setEventHandler(BLERead, magReadHandler);
@@ -194,7 +196,8 @@ void initBLEPeripheral() {
 
   BLE.advertise();
 
-  printg("Bluetooth device active, waiting for connections...\n\r");
+
+  log_i("Bluetooth device active, waiting for connections...");
 }
 
 
@@ -202,9 +205,9 @@ void initBLEPeripheral() {
 bool connectBLEPeripheral() {
   remote = BLE.central();
   if (remote && remote.connected()) {
-    printg("Connected:");
-    printg("  address: %s\n\r", remote.address());
-    printg("  name: %s\n\r", remote.deviceName());
+    log_i("Connected:");
+    log_d("  address: %s", remote.address().c_str());
+    log_d("  name: %s", remote.deviceName().c_str());
     aliveChar->writeValue(CONNECTION_KEEPALIVE_TIMEOUT2);
     connectionLastAlive = millis();
     connected_peripheral = true;
@@ -216,9 +219,9 @@ bool connectBLEPeripheral() {
 
 // Disconnect, working both for peripheral and central
 void disconnectBLE() {
-  printg("Disconnected\n\r");
+  log_w("Disconnected");
   remote.disconnect();
-  printg("Rebooting\n\r");
+  log_w("Rebooting");
   wait(0.1);
   system_reset();
 }
@@ -232,7 +235,7 @@ void writeMagRaw(float mag_raw[]) {
   for (int i = 0; i < 3; i++) {
     magRawChar[i]->writeValue(mag_raw[i]);
   }
-  printg("Mag_raw: %s\n\r", buf);
+  log_d("Mag_raw: %s", buf);
 }
 
 
@@ -244,7 +247,7 @@ void writeMagFilt(float mag_filt[]) {
   for (int i = 0; i < 3; i++) {
     magFiltChar[i]->writeValue(mag_filt[i]);
   }
-  printg("Mag_filt: %s\n\r", buf);
+  log_d("Mag_filt: %s", buf);
 }
 
 
@@ -256,7 +259,7 @@ void writeAcc(float acc[]) {
   for (int i = 0; i < 3; i++) {
     accChar[i]->writeValue(acc[i]);
   }
-  printg("Acc: %s\n\r", buf);
+  log_d("Acc: %s", buf);
 }
 
 // update State characteristic
@@ -295,20 +298,18 @@ void updateSwitches() {
 // return true if the connection is alive, ignore timeout if switch1 is ON
 bool connectedPeripheral() {
   if (!remote.connected()) {
-    //printg("not connected\n\r");
+    //log_d("connection dead: not connected");
     return false;
   }
 
   if (switch_1()) {
-    //printg("isAlive(): Switch 1 ON --> connection timeout disabled\n\r");
     return true;
   }
 
   if (millis() - connectionLastAlive < aliveChar->value()) {
-    //printg("  OK\n\r");
     return true;
   } else {
-    printg("  TIMEOUT\n\r");
+    log_e("connection dead: timeout");
     return false;
   }
 }
@@ -330,6 +331,7 @@ bool connectedPeripheral() {
 
 // called when a central device tries to connect
 void blePeripheralConnectHandler(BLEDevice central) {
+  log_d("BLE connected event");
   connectionLastAlive = millis();
   connected_peripheral = true;
 }
@@ -337,14 +339,16 @@ void blePeripheralConnectHandler(BLEDevice central) {
 
 // called when a central close the connection
 void blePeripheralDisconnectHandler(BLEDevice central) {
+  log_w("BLE disconnected event");
   connected_peripheral = false;
 }
 
 
 // called when the keepalive characteristic is changed
 void connectionAliveHandler(BLEDevice central, BLECharacteristic characteristic) {
+  log_d("BLE alive event");
   connectionLastAlive = millis();
-  printg("alive millis=%ld\n\r", millis());
+  log_d("alive millis=%ld", millis());
 }
 
 
@@ -365,7 +369,7 @@ void initBLECentral() {
   }
 
   BLE.scanForName("Cupola");
-  printg("Scanning ...\n\r");
+  log_i("Scanning ...");
 }
 
 
@@ -373,22 +377,22 @@ void initBLECentral() {
 bool connectBLECentral() {
   remote = BLE.available();
   if (remote) {
-    printg("Found\n\r");
+    log_i("Found");
     BLE.stopScan();
 
     // connect to the peripheral
     if (remote.connect()) {
-      printg("Connected\n\r");
+      log_i("Connected");
     } else {
-      printg("Failed to connect!\n\r");
+      log_e("Failed to connect!");
       return false;
     }
 
-    Serial.println("Discovering attributes ...");
+    log_d("Discovering attributes ...");
     if (remote.discoverAttributes()) {
-      printg("Attributes discovered\n\r");
+      log_d("Attributes discovered");
     } else {
-      printg("Attribute discovery failed!\n\r");
+      log_e("Attribute discovery failed!");
       disconnectBLE();
       return false;
     }
@@ -431,15 +435,15 @@ bool connectBLECentral() {
       magRawStringChar && magRawXChar && magRawYChar && magRawZChar && magFiltStringChar && magFiltXChar && magFiltYChar && magFiltZChar &&
       accStringChar && accXChar && accYChar && accZChar &&
       aliveChar ) {
-      printg("Characteristics OK\n\r");
+      log_d("Characteristics OK");
     } else {
-      printg("Problem with haracteristics\n\r");
+      log_e("Problem with haracteristics");
       disconnectBLE();
       return false;
     }
 
     if (!switchChar[0]->subscribe()) {
-      printg("Cannot subscribe to switchChar\n\r");
+      log_e("Cannot subscribe to switchChar");
       disconnectBLE();
       return false;
     }
@@ -447,11 +451,11 @@ bool connectBLECentral() {
     aliveChar->read();
     aliveChar->writeValue(CONNECTION_KEEPALIVE_TIMEOUT2);
     connectionLastAlive = millis();
-    printg("Connected\n\r");
+    log_i("Connected");
     connected_central = true;
     return true;
   }
-  printg("not found\n\r");
+  log_w("not found");
   return false;
 }
 
@@ -465,7 +469,7 @@ void readRemoteMagRaw(float res[]) {
   for (int i = 0; i < 3; i++) {
     float tmp;
     magRawChar[i]->readValue(&tmp, 4);
-    //printg("magFiltChar[%d]=%f=%0h\n\r",i,tmp,tmp);
+    //printg("magFiltChar[%d]=%f=%0h",i,tmp,tmp);
     res[i] = tmp;
   }
 }
@@ -493,14 +497,14 @@ void readRemoteAcc(float res[])  {
 
 
 // set the state on the remote device
-void setRemoteState(enum states state){
-   stateChar->writeValue((uint8_t)state);
+void setRemoteState(enum states state) {
+  stateChar->writeValue((uint8_t)state);
 }
 
 // return true if the connection is alive, ignore timeout if debug is true
 bool isAliveCentral() {
   if (!BLE.connected()) {
-    printg("isAlive(): not connected\n\r");
+    log_e("connection dead: not connected");
     return false;
   }
   //printg("isAlive(): millis=%ld connectionLastAlive=%ld\n\r", millis(), connectionLastAlive);
@@ -511,7 +515,7 @@ bool isAliveCentral() {
       connectionLastAlive = millis();
       return true;
     } else {
-      printg("  update FAILLURE\n\r");
+      log_e("connection dead: update faillure");
       return false;
     }
   } else {
@@ -548,7 +552,7 @@ BLECharacteristic* findCharacteristic(const char * uuid) {
   BLECharacteristic ret;
   ret = remote.characteristic(uuid);
   if (!ret) {
-    printg("unable to find characteristic %s\n\r", uuid);
+    log_e("unable to find characteristic %s", uuid);
   }
   return new BLECharacteristic(ret);
 
