@@ -100,7 +100,7 @@ void initBLEPeripheral() {
   stateChar->writeValue(state);
 
   magService = new BLEService(UUID_PREFIX "30");
-  magRawStringChar = new BLECharacteristic(UUID_PREFIX "31", BLERead, " xxx.xxxxx, xxx.xxxxx, xxx.xxxxx");
+  magRawStringChar = new BLECharacteristic(UUID_PREFIX "31", BLERead, " xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
   magRawStringDescr = new BLEDescriptor ("2901", "Mag raw X,Y,Z");
   magRawXChar = new BLEFloatCharacteristic(UUID_PREFIX "32", BLERead | BLENotify);
   magRawXDescr = new BLEDescriptor ("2901", "Mag raw X");
@@ -115,7 +115,7 @@ void initBLEPeripheral() {
   magRawDescr[1] = magRawYDescr;
   magRawDescr[2] = magRawZDescr;
 
-  magFiltStringChar = new BLECharacteristic(UUID_PREFIX "35", BLERead | BLENotify, " xxx.xxxxx, xxx.xxxxx, xxx.xxxxx");
+  magFiltStringChar = new BLECharacteristic(UUID_PREFIX "35", BLERead | BLENotify, " xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
   magFiltStringDescr = new BLEDescriptor ("2901", "Mag filt X,Y,Z");
   magFiltXChar = new BLEFloatCharacteristic(UUID_PREFIX "36", BLERead | BLENotify);
   magFiltXDescr = new BLEDescriptor ("2901", "Mag filt X");
@@ -131,10 +131,10 @@ void initBLEPeripheral() {
   magFiltDescr[2] = magFiltZDescr;
   magService->addCharacteristic(*magRawStringChar);
   magRawStringChar->addDescriptor(*magRawStringDescr);
-  magRawStringChar->writeValue(" xxx.xxxxx, xxx.xxxxx, xxx.xxxxx");
+  magRawStringChar->writeValue(" xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
   magService->addCharacteristic(*magFiltStringChar);
   magFiltStringChar->addDescriptor(*magFiltStringDescr);
-  magFiltStringChar->writeValue(" xxx.xxxxx, xxx.xxxxx, xxx.xxxxx");
+  magFiltStringChar->writeValue(" xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
   for (int i = 0; i <= 2; i++) {
     magService->addCharacteristic(*magRawChar[i]);
     magRawChar[i]->addDescriptor(*magRawDescr[i]);
@@ -145,7 +145,7 @@ void initBLEPeripheral() {
   }
 
   accService = new BLEService(UUID_PREFIX "40");
-  accStringChar = new BLECharacteristic(UUID_PREFIX "41", BLERead | BLENotify, " xxx.xxxxx, xxx.xxxxx, xxx.xxxxx");
+  accStringChar = new BLECharacteristic(UUID_PREFIX "41", BLERead | BLENotify, " xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
   accStringDescr = new BLEDescriptor ("2901", "Acc X,Y,Z");
   accXChar = new BLEFloatCharacteristic(UUID_PREFIX "42", BLERead | BLENotify);
   accXDescr = new BLEDescriptor ("2901", "Acc X");
@@ -161,7 +161,7 @@ void initBLEPeripheral() {
   accDescr[2] = accZDescr;
   accService->addCharacteristic(*accStringChar);
   accStringChar->addDescriptor(*accStringDescr);
-  accStringChar->writeValue(" xxx.xxxxx, xxx.xxxxx, xxx.xxxxx");
+  accStringChar->writeValue(" xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
   for (int i = 0; i <= 2; i++) {
     accService->addCharacteristic(*accChar[i]);
     accChar[i]->addDescriptor(*accDescr[i]);
@@ -230,36 +230,36 @@ void disconnectBLE() {
 // update Mag Raw characteristic
 void writeMagRaw(float mag_raw[]) {
   char buf[32];
-  snprintf(buf, 32, "%6.2f,%6.2f,%6.2f", mag_raw[0], mag_raw[1], mag_raw[2]);
+  snprintf(buf, 32, "%6.3f,%6.3f,%6.3f", mag_raw[0], mag_raw[1], mag_raw[2]);
   magRawStringChar->writeValue(buf);
   for (int i = 0; i < 3; i++) {
     magRawChar[i]->writeValue(mag_raw[i]);
   }
-  log_d("Mag_raw: %s", buf);
+  //log_d("Mag_raw: %s", buf);
 }
 
 
 // update Mag Filt characteristic
 void writeMagFilt(float mag_filt[]) {
   char buf[32];
-  snprintf(buf, 32, "%6.2f,%6.2f,%6.2f", mag_filt[0], mag_filt[1], mag_filt[2]);
+  snprintf(buf, 32, "%6.3f,%6.3f,%6.3f", mag_filt[0], mag_filt[1], mag_filt[2]);
   magFiltStringChar->writeValue(buf);
   for (int i = 0; i < 3; i++) {
     magFiltChar[i]->writeValue(mag_filt[i]);
   }
-  log_d("Mag_filt: %s", buf);
+  //log_d("Mag_filt: %s", buf);
 }
 
 
 // update Acc characteristic
 void writeAcc(float acc[]) {
   char buf[32];
-  snprintf(buf, 32, "%6.2f,%6.2f,%6.2f", acc[0], acc[1], acc[2]);
+  snprintf(buf, 32, "%6.3f,%6.3f,%6.3f", acc[0], acc[1], acc[2]);
   accStringChar->writeValue(buf);
   for (int i = 0; i < 3; i++) {
     accChar[i]->writeValue(acc[i]);
   }
-  log_d("Acc: %s", buf);
+  //log_d("Acc: %s", buf);
 }
 
 // update State characteristic

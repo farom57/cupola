@@ -31,5 +31,31 @@ Pour passer d'un mode à l'autre il est necessaire de modifier la position des d
     
 Communication serie à 57600baud
 
+Liste service et characteristiques BLE
 
-    
+00 Battery service
+  01 Battery voltage: non implémenté
+10 Switch service
+  11 Boutton: repos=0 appuyé=1
+  12 Switch 1: OFF=0 ON=1
+  13 Switch 2: OFF=0 ON=1
+  14 Switch 3: OFF=0 ON=1
+  15 Switch 4: OFF=0 ON=1
+20 State service
+  21 State: ERR=0 INIT=1 SLEEP=2 CONNECTION=3 STANDBY=4 ON=5 MOVE=6
+30 Mag service
+  31 Raw XYZ string in uT:  xxx.xxxxx, yyy.yyyyy, zzz.zzzzz
+  32 Raw X (float)
+  33 Raw Y (float)
+  34 Raw Z (float)
+  35 Filtered XYZ string in uT:  xxx.xxxxx, yyy.yyyyy, zzz.zzzzz
+  36 Filtered X (float)
+  37 Filtered Y (float)
+  38 Filtered Z (float)
+40 Acc service
+  31 XYZ string in g:  xxx.xxxxx, yyy.yyyyy, zzz.zzzzz
+  32 Raw X (float)
+  33 Raw Y (float)
+  34 Raw Z (float)
+50 Alive service
+  51 timeout

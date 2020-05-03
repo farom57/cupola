@@ -242,20 +242,20 @@ void updateMag() {
     errorCount = 0;
     readMagConv(mag_raw);
     writeMagRaw(mag_raw);
-    log_d("RAW: %f %f %f",mag_raw[0],mag_raw[1],mag_raw[2]);
+    //log_d("RAW: %f %f %f",mag_raw[0],mag_raw[1],mag_raw[2]);
 
     // filtering
     v_lincomb(1.0 - K_SMOOTH, mag_smooth, K_SMOOTH, mag_raw, mag_smooth);
-    log_d("SMOOTH: %f %f %f", mag_smooth[0], mag_smooth[1], mag_smooth[2]);
+    //log_d("SMOOTH: %f %f %f", mag_smooth[0], mag_smooth[1], mag_smooth[2]);
 
     // change detection
     float diff[3];
     v_sub(mag_smooth, mag_filt, diff);
-    log_d("DIFF: %f %f %f (%f)", diff[0], diff[1], diff[2], norm(diff));
+    //log_d("DIFF: %f %f %f (%f)", diff[0], diff[1], diff[2], norm(diff));
     if (norm(diff) > MAG_CHANGE_THRESHOLD) {
       v_copy(mag_smooth, mag_filt);
       writeMagFilt(mag_filt);
-      log_d("FILT: %f %f %f", mag_filt[0], mag_filt[1], mag_filt[2]);
+      log_d("MAG FILT: %f %f %f", mag_filt[0], mag_filt[1], mag_filt[2]);
     }
 
 
@@ -263,7 +263,7 @@ void updateMag() {
     errorCount++;
     
     if (errorCount > 5) {
-      stopIMU();
+      //stopIMU();
       mag_error_flag=true;
     }
   }
@@ -275,12 +275,12 @@ void updateAcc() {
     errorCount = 0;
     readAccConv(acc_filt); // filtering is done inside the sensor
     writeAcc(acc_filt);
-
+    acc_error_flag=false;
   } else {
     errorCount++;
     
     if (errorCount > 5) {
-      stopIMU();
+      //stopIMU();
       acc_error_flag=true;
     }
   }

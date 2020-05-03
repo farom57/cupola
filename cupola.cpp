@@ -42,7 +42,7 @@ void setup() {
   ledRYG(true,false,false);
   Serial.begin(57600);
   
-  
+  log_i("Compilation date: " __DATE__ " " __TIME__);
 
   if (operating_mode == CUPOLA) {
     //IMU test (mag only in CUPOLA mode)
@@ -120,7 +120,7 @@ void loop_debug() {
   // Connection, state change directly to ON in debug mode
   if (state == CONNECTION && connectedPeripheral()) {
     state = STANDBY;
-    //writeState(state);
+    writeState(state);
   }
   // Disconnection
   if (state > CONNECTION && !connectedPeripheral()) {
@@ -130,7 +130,7 @@ void loop_debug() {
   // Request received to change state to ON
   if (state == STANDBY && readState() == ON) {
     state = ON;
-    initIMUMag();
+    initIMUMagAcc();
     writeMagRaw(mag_raw);
     writeMagFilt(mag_filt);
     writeState(state);
@@ -145,6 +145,7 @@ void loop_debug() {
   if (acc_error_flag || mag_error_flag) {
     //in debug mode, error are displayed with the led but ignored
     ledRGB(acc_error_flag, mag_error_flag, false);
+    log_e("IMU error, acc_error_flag=%u mag_error_flag=%u",acc_error_flag,mag_error_flag);
   }
 
   // state operations
