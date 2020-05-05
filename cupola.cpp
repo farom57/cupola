@@ -187,14 +187,13 @@ void loop_mount() {
   }
   // Disconnection
   if (state > CONNECTION && !connectedCentral()) {
-    state = CONNECTION;
-    log_i("Disconnection, state change to CONNECTION");
+    system_reset();
+    log_e("Disconnection, System reset");
   }
   //button pressed and released
-  //bool btn_changed=(old_local_btn_state && !btn())||(old_remote_btn_state && !remoteBtn());
-  bool btn_changed = (old_local_btn_state && !btn());
+  bool btn_changed=(old_local_btn_state && !btn())||(old_remote_btn_state && !remoteBtn());
   old_local_btn_state = btn();
-  //old_remote_btn_state=remoteBtn();
+  old_remote_btn_state=remoteBtn();
   if (state == STANDBY && btn_changed) {
     state = ON;
     setRemoteState(ON);

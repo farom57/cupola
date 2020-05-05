@@ -185,7 +185,7 @@ void initBLEPeripheral() {
   BLE.addService(*magService);
   BLE.addService(*accService);
   BLE.addService(*aliveService);
-  
+
   BLE.setEventHandler(BLEConnected, blePeripheralConnectHandler);
   BLE.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
   aliveChar->setEventHandler(BLERead, connectionAliveHandler);
@@ -302,7 +302,7 @@ bool connectedPeripheral() {
     return false;
   }
 
-  if (operating_mode==DEBUG) {
+  if (operating_mode == DEBUG) {
     return true;
   }
 
@@ -447,7 +447,7 @@ bool connectBLECentral() {
       disconnectBLE();
       return false;
     }
-//    switchChar[0]->setEventHandler(BLEWritten, btnChangedHandler);
+    //    switchChar[0]->setEventHandler(BLEWritten, btnChangedHandler);
     aliveChar->read();
     aliveChar->writeValue(CONNECTION_KEEPALIVE_TIMEOUT2);
     connectionLastAlive = millis();
@@ -505,6 +505,7 @@ void setRemoteState(enum states state) {
 bool connectedCentral() {
   if (!BLE.connected()) {
     //log_e("connection dead: not connected");
+    connected_central = false;
     return false;
   }
   //printg("isAlive(): millis=%ld connectionLastAlive=%ld\n\r", millis(), connectionLastAlive);
@@ -516,6 +517,7 @@ bool connectedCentral() {
       return true;
     } else {
       log_e("connection dead: update faillure");
+      connected_central = false;
       return false;
     }
   } else {
@@ -525,8 +527,11 @@ bool connectedCentral() {
 }
 
 // return state of the remote btn
-bool remoteBtn(){
+bool remoteBtn() {
+  if (connected_central) {
     return switchChar[0]->value();
+  }
+  return false;
 }
 
 
