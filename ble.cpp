@@ -302,7 +302,7 @@ bool connectedPeripheral() {
     return false;
   }
 
-  if (switch_1()) {
+  if (operating_mode==DEBUG) {
     return true;
   }
 
@@ -447,7 +447,7 @@ bool connectBLECentral() {
       disconnectBLE();
       return false;
     }
-    switchChar[0]->setEventHandler(BLEWritten, btnChangedHandler);
+//    switchChar[0]->setEventHandler(BLEWritten, btnChangedHandler);
     aliveChar->read();
     aliveChar->writeValue(CONNECTION_KEEPALIVE_TIMEOUT2);
     connectionLastAlive = millis();
@@ -455,7 +455,7 @@ bool connectBLECentral() {
     connected_central = true;
     return true;
   }
-  log_w("not found");
+  //log_w("not found");
   return false;
 }
 
@@ -502,9 +502,9 @@ void setRemoteState(enum states state) {
 }
 
 // return true if the connection is alive, ignore timeout if debug is true
-bool isAliveCentral() {
+bool connectedCentral() {
   if (!BLE.connected()) {
-    log_e("connection dead: not connected");
+    //log_e("connection dead: not connected");
     return false;
   }
   //printg("isAlive(): millis=%ld connectionLastAlive=%ld\n\r", millis(), connectionLastAlive);
@@ -524,8 +524,10 @@ bool isAliveCentral() {
   }
 }
 
-
-
+// return state of the remote btn
+bool remoteBtn(){
+    return switchChar[0]->value();
+}
 
 
 

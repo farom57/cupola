@@ -53,9 +53,9 @@ Liste service et characteristiques BLE
   37 Filtered Y (float)
   38 Filtered Z (float)
 40 Acc service
-  31 XYZ string in g:  xxx.xxxxx, yyy.yyyyy, zzz.zzzzz
-  32 Raw X (float)
-  33 Raw Y (float)
-  34 Raw Z (float)
+  41 XYZ string in g:  xxx.xxxxx, yyy.yyyyy, zzz.zzzzz
+  42 Raw X (float)
+  43 Raw Y (float)
+  44 Raw Z (float)
 50 Alive service
   51 timeout

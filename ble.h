@@ -41,12 +41,12 @@ void readRemoteMagRaw(float mag_raw[]);   // Read Mag Raw on the remote device
 void readRemoteMagFilt(float mag_filt[]); // Read Mag Filt on the remote device
 void readRemoteAcc(float acc[]);          // Read Acc on the remote device
 void setRemoteState(enum states state);   // set the state on the remote device
-bool isAliveCentral();                    // return true if the connection is alive, ignore timeout if debug is true
-
+bool connectedCentral();                  // return true if the connection is alive, ignore timeout if debug is true
+bool remoteBtn();                         // return state of the remote btn
 //   ----------------------------
 //   ---   Central handlers   ---
 //   ----------------------------
-void btnChangedHandler(BLEDevice central, BLECharacteristic characteristic);  // implemented in cupola.cpp, called if a switch is changed on the peripheral
+//void btnChangedHandler(BLEDevice central, BLECharacteristic characteristic);  // implemented in cupola.cpp, called if a switch is changed on the peripheral
 
 //   -------------------------------------
 //   ---   Private functions   ---

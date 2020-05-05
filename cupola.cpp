@@ -18,6 +18,8 @@ enum states state = INIT;
 enum operating_modes operating_mode;
 bool acc_error_flag = false;
 bool mag_error_flag = false;
+bool old_local_btn_state = false;
+bool old_remote_btn_state = false;
 float mag_raw[3];
 float mag_smooth[3];
 float mag_filt[3];
@@ -38,15 +40,16 @@ void setup() {
     operating_mode = MOUNT;
   }
 
-  
-  ledRYG(true,false,false);
+
+  ledRYG(true, false, false);
   Serial.begin(57600);
-  
+
   log_i("Compilation date: " __DATE__ " " __TIME__);
 
   if (operating_mode == CUPOLA) {
     //IMU test (mag only in CUPOLA mode)
     initIMUMag();
+    while (!btn()) {}
     if (!testIMUMag()) {
       log_e("Failed to initialize Magnetometer!");
       ledRGB(false, true, false);
@@ -94,7 +97,6 @@ void setup() {
     stopIMU(); // stop the IMU, it is activated on demand to save power
     initBLEPeripheral();
     state = CONNECTION;
-
   }
   log_i("Initialisation done");
 
@@ -115,17 +117,20 @@ void loop() {
 
 void loop_debug() {
   BLE.poll();
-  
+
   // state transitions
   // Connection, state change directly to ON in debug mode
   if (state == CONNECTION && connectedPeripheral()) {
     state = STANDBY;
     writeState(state);
+    log_i("Connection, state change to STANDBY");
   }
   // Disconnection
   if (state > CONNECTION && !connectedPeripheral()) {
     state = CONNECTION;
+    stopIMU();
     writeState(state);
+    log_i("Disconnection, state change to CONNECTION");
   }
   // Request received to change state to ON
   if (state == STANDBY && readState() == ON) {
@@ -134,18 +139,20 @@ void loop_debug() {
     writeMagRaw(mag_raw);
     writeMagFilt(mag_filt);
     writeState(state);
+    log_i("State change received, state change to ON");
   }
   // Request received to change state to STANDBY
   if (state == ON && readState() == STANDBY) {
     state = STANDBY;
     stopIMU();
     writeState(state);
+    log_i("State change received, state change to STANDBY");
   }
   // Error
   if (acc_error_flag || mag_error_flag) {
     //in debug mode, error are displayed with the led but ignored
     ledRGB(acc_error_flag, mag_error_flag, false);
-    log_e("IMU error, acc_error_flag=%u mag_error_flag=%u",acc_error_flag,mag_error_flag);
+    log_e("IMU error, acc_error_flag=%u mag_error_flag=%u", acc_error_flag, mag_error_flag);
   }
 
   // state operations
@@ -170,60 +177,115 @@ void loop_debug() {
 }
 
 void loop_mount() {
-  //  if (mode == CONNECTION) {
-  //    ledRYG(true, false, true);
-  //    if (connectBLECentral()) {
-  //      mode = STANDBY;
-  //    } else {
-  //      wait(1.);
-  //    }
-  //  }
-  //TODO
+  BLE.poll();
+
+  // state transitions
+  // Connection, state change directly to ON in debug mode
+  if (state == CONNECTION && connectedCentral()) {
+    state = STANDBY;
+    log_i("Connection, state change to STANDBY");
+  }
+  // Disconnection
+  if (state > CONNECTION && !connectedCentral()) {
+    state = CONNECTION;
+    log_i("Disconnection, state change to CONNECTION");
+  }
+  //button pressed and released
+  //bool btn_changed=(old_local_btn_state && !btn())||(old_remote_btn_state && !remoteBtn());
+  bool btn_changed = (old_local_btn_state && !btn());
+  old_local_btn_state = btn();
+  //old_remote_btn_state=remoteBtn();
+  if (state == STANDBY && btn_changed) {
+    state = ON;
+    setRemoteState(ON);
+    btn_changed = false;
+    log_i("Button pressed, state change to ON");
+  }
+  if (state == ON && btn_changed) {
+    state = STANDBY;
+    setRemoteState(STANDBY);
+    btn_changed = false;
+    log_i("Button pressed, state change to STANDBY");
+  }
+
+  // Error
+  if (acc_error_flag || mag_error_flag) {
+    ledRGB(acc_error_flag, mag_error_flag, false);
+    log_e("IMU error, acc_error_flag=%u mag_error_flag=%u", acc_error_flag, mag_error_flag);
+  }
+
+  // state operations
+  if (state == CONNECTION) {
+    ledRYG(true, false, true);
+    connectBLECentral();
+    delay(100);
+  }
+  if (state == STANDBY) {
+    ledRYG(false, false, true);
+    delay(100);
+  }
+  if (state == ON) {
+    ledRYG(false, true, true);
+    delay(100);
+  }
 }
 
 void loop_cupola() {
+  BLE.poll();
 
-  //  // state transitions
-  //  if (state == CONNECTION && peripheralConnected()) {
-  //    state = STANDBY;
-  //    writeState(state);
-  //  }
-  //
-  //  if (state >= STANDBY && !peripheralConnected()) {
-  //    state = CONNECTION;
-  //    writeState(state);
-  //  }
-  //
-  //  if (state == STANDBY && readState() == ON) {
-  //    state = ON;
-  //    initIMUMag();
-  //    writeMagRaw(mag_raw);
-  //    writeMagFilt(mag_filt);
-  //    writeState(state);
-  //  }
-  //
-  //  if (state == ON && readState() == STANDBY) {
-  //    state = STANDBY;
-  //    stopIMU();
-  //    writeState(state);
-  //  }
-  //
-  //  // state operations
-  //  if (state == CONNECTION) {
-  //    ledRYG(true, true, true);
-  //    connectBLEPeripheral();
-  //  }
-  //
-  //    if (state == STANDBY) {
-  //    ledRYG(false, false, true);
-  //    updateSwitches();
-  //  }
-  //
-  //  if (state == ON) {
-  //    ledRYG(false, true, true);
-  //    updateSwitches();
-  //    updateMag();
-  //  }
+  // state transitions
+  // Connection, state change directly to ON in debug mode
+  if (state == CONNECTION && connectedPeripheral()) {
+    state = STANDBY;
+    writeState(state);
+    log_i("Connection, state change to STANDBY");
+  }
+  // Disconnection
+  if (state > CONNECTION && !connectedPeripheral()) {
+    state = CONNECTION;
+    stopIMU();
+    writeState(state);
+    log_i("Disconnection, state change to CONNECTION");
+  }
+  // Request received to change state to ON
+  if (state == STANDBY && readState() == ON) {
+    state = ON;
+    initIMUMag();
+    writeMagRaw(mag_raw);
+    writeMagFilt(mag_filt);
+    writeState(state);
+    log_i("State change received, state change to ON");
+  }
+  // Request received to change state to STANDBY
+  if (state == ON && readState() == STANDBY) {
+    state = STANDBY;
+    stopIMU();
+    writeState(state);
+    log_i("State change received, state change to STANDBY");
+  }
+  // Error
+  if (acc_error_flag || mag_error_flag) {
+    ledRGB(acc_error_flag, mag_error_flag, false);
+    log_e("IMU error, acc_error_flag=%u mag_error_flag=%u", acc_error_flag, mag_error_flag);
+  }
+
+  // state operations
+  if (state == CONNECTION) {
+    ledRYG(true, false, true);
+    connectBLEPeripheral();
+    delay(100);
+  }
+  if (state == STANDBY) {
+    ledRYG(false, false, true);
+    updateSwitches();
+    delay(100);
+  }
+  if (state == ON) {
+    ledRYG(false, true, true);
+    updateSwitches();
+    updateMag();
+    delay(100);
+  }
 
 }
 
@@ -330,12 +392,12 @@ void magReadHandler(BLEDevice central, BLECharacteristic characteristic) {
 //}
 
 //void toggleMode() {
-//  if (mode == STANDBY) {
-//    setRemoteModeON(true);
+//  if (state == STANDBY) {
+//    setRemoteState(STANDBY);
 //    initIMUMagAcc();
-//    mode = ON;
-//  } else if (mode == ON) {
-//    setRemoteModeON(false);
+//    state = ON;
+//  } else if (state == ON) {
+//    setRemoteState(STANDBY);
 //    stopIMU();
 //    mode = STANDBY;
 //  }

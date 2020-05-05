@@ -41,8 +41,8 @@ void initIMUMag() {
   Wire1.begin();
 
   // reset
+  writeRegister(LSM9DS1_ADDRESS, LSM9DS1_CTRL_REG8, 0x05);
   writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M, 0x0c);
-
   delay(10);
 
   // Mag
@@ -50,14 +50,13 @@ void initIMUMag() {
   writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M, 0x00); // 4 Gauss
   writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG3_M, 0x00); // Continuous conversion mode
   writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG4_M, 0x08); // high perf
-
+  ledRGB(false, true, false);
   while (!magAvailable()) {}
+  ledRGB(false, false, false);
   readMagConv(mag_raw);
   v_copy(mag_raw, mag_smooth);
   v_copy(mag_raw, mag_filt);
 
-  writeMagRaw(mag_raw);
-  writeMagFilt(mag_filt);
 }
 
 void initIMUMagAcc() {
@@ -82,7 +81,7 @@ void initIMUMagAcc() {
   writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG2_M, 0x00); // 4 Gauss
   writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG3_M, 0x00); // Continuous conversion mode
   writeRegister(LSM9DS1_ADDRESS_M, LSM9DS1_CTRL_REG4_M, 0x08); // high perf
-  ledRGB(false, false, true);
+  ledRGB(false, true, false);
   while (!magAvailable()) {}
   ledRGB(false, false, false);
   readMagConv(mag_raw);
@@ -91,7 +90,7 @@ void initIMUMagAcc() {
   ledRGB(true, false, false);
   while (!accAvailable()) {}
   ledRGB(false, false, false);
-  readMagConv(acc_filt);
+  readAccConv(acc_filt);
 }
 
 
@@ -259,12 +258,12 @@ void updateMag() {
     }
 
 
-   } else {
+  } else {
     errorCount++;
-    
+
     if (errorCount > 5) {
       //stopIMU();
-      mag_error_flag=true;
+      mag_error_flag = true;
     }
   }
 }
@@ -275,13 +274,13 @@ void updateAcc() {
     errorCount = 0;
     readAccConv(acc_filt); // filtering is done inside the sensor
     writeAcc(acc_filt);
-    acc_error_flag=false;
+    acc_error_flag = false;
   } else {
     errorCount++;
-    
+
     if (errorCount > 5) {
       //stopIMU();
-      acc_error_flag=true;
+      acc_error_flag = true;
     }
   }
 
