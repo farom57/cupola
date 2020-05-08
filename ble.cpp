@@ -22,6 +22,7 @@ BLEService* stateService;
 BLEService* magService;
 BLEService* accService;
 BLEService* aliveService;
+BLEService* stService;
 // TODO: ajouter temperature
 
 // BLE Characteristic
@@ -48,7 +49,9 @@ BLEDescriptor *magRawDescr[3], *magFiltDescr[3], *accDescr[3];
 BLELongCharacteristic* aliveChar;
 BLEDescriptor* aliveDescr;
 
-
+// Settings
+BLECharacteristic *stChar[ST_NB];
+BLEDescriptor *stDescr[ST_NB];
 
 
 //   ---------------------------------------
@@ -174,7 +177,19 @@ void initBLEPeripheral() {
   aliveService->addCharacteristic(*aliveChar);
   aliveChar->addDescriptor(*aliveDescr);
 
-
+  stService = new BLEService(UUID_PREFIX "60");
+  for (int i = 0; i < ST_NB; i++) {
+    char uuid[40];
+    char val[ST_VAL_LEN] = "not initalized";
+    int sufix = 0x60 + i + 1;
+    sprintf(uuid, UUID_PREFIX "%02x", sufix);
+    readSt(st_keys[i], val);
+    stChar[i] = new BLECharacteristic(uuid, BLERead | BLEWrite, ST_VAL_LEN);
+    stChar[i]->writeValue(val, strlen(val)+1);
+    stDescr[i] = new BLEDescriptor ("2901", st_keys[i]);
+    stService->addCharacteristic(*stChar[i]);
+    stChar[i]->addDescriptor(*stDescr[i]);
+  }
 
   BLE.setLocalName("Cupola");
   BLE.setAdvertisedService(*batteryService);
@@ -185,6 +200,7 @@ void initBLEPeripheral() {
   BLE.addService(*magService);
   BLE.addService(*accService);
   BLE.addService(*aliveService);
+  BLE.addService(*stService);
 
   BLE.setEventHandler(BLEConnected, blePeripheralConnectHandler);
   BLE.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
@@ -206,8 +222,7 @@ bool connectBLEPeripheral() {
   remote = BLE.central();
   if (remote && remote.connected()) {
     log_i("Connected:");
-    log_d("  address: %s", remote.address().c_str());
-    log_d("  name: %s", remote.deviceName().c_str());
+    log_i("  address: %s", remote.address().c_str());
     aliveChar->writeValue(CONNECTION_KEEPALIVE_TIMEOUT2);
     connectionLastAlive = millis();
     connected_peripheral = true;
@@ -314,8 +329,14 @@ bool connectedPeripheral() {
   }
 }
 
-
-
+// check if a setting char has been written and save the setting
+void checkStWritten() {
+  for (int i = 0; i < ST_NB; i++) {
+    if (stChar[i]->written()) {
+      saveSt(st_keys[i], (const char*)stChar[i]->value(),stChar[i]->valueLength());
+    }
+  }
+}
 
 
 
@@ -331,7 +352,6 @@ bool connectedPeripheral() {
 
 // called when a central device tries to connect
 void blePeripheralConnectHandler(BLEDevice central) {
-  log_d("BLE connected event");
   connectionLastAlive = millis();
   connected_peripheral = true;
 }
@@ -346,9 +366,7 @@ void blePeripheralDisconnectHandler(BLEDevice central) {
 
 // called when the keepalive characteristic is changed
 void connectionAliveHandler(BLEDevice central, BLECharacteristic characteristic) {
-  log_d("BLE alive event");
   connectionLastAlive = millis();
-  log_d("alive millis=%ld", millis());
 }
 
 
@@ -388,9 +406,9 @@ bool connectBLECentral() {
       return false;
     }
 
-    log_d("Discovering attributes ...");
+    //log_d("Discovering attributes ...");
     if (remote.discoverAttributes()) {
-      log_d("Attributes discovered");
+      //log_d("Attributes discovered");
     } else {
       log_e("Attribute discovery failed!");
       disconnectBLE();
@@ -435,7 +453,7 @@ bool connectBLECentral() {
       magRawStringChar && magRawXChar && magRawYChar && magRawZChar && magFiltStringChar && magFiltXChar && magFiltYChar && magFiltZChar &&
       accStringChar && accXChar && accYChar && accZChar &&
       aliveChar ) {
-      log_d("Characteristics OK");
+      //log_d("Characteristics OK");
     } else {
       log_e("Problem with haracteristics");
       disconnectBLE();

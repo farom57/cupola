@@ -34,6 +34,11 @@ void setup() {
   if (switch_1()) {
     operating_mode = DEBUG;
     while (!btn()) {}
+    if (switch_1() && !switch_2() && switch_3() && !switch_4()) {
+      ledRGB(true, true, true);
+      resetSt();
+      ledRGB(false, false, false);
+    }
   } else if (switch_2()) {
     operating_mode = CUPOLA;
   } else {
@@ -44,12 +49,13 @@ void setup() {
   ledRYG(true, false, false);
   Serial.begin(57600);
 
+  loadSt();
+
   log_i("Compilation date: " __DATE__ " " __TIME__);
 
   if (operating_mode == CUPOLA) {
     //IMU test (mag only in CUPOLA mode)
     initIMUMag();
-    while (!btn()) {}
     if (!testIMUMag()) {
       log_e("Failed to initialize Magnetometer!");
       ledRGB(false, true, false);
@@ -117,6 +123,7 @@ void loop() {
 
 void loop_debug() {
   BLE.poll();
+  checkStWritten();
 
   // state transitions
   // Connection, state change directly to ON in debug mode
@@ -127,10 +134,9 @@ void loop_debug() {
   }
   // Disconnection
   if (state > CONNECTION && !connectedPeripheral()) {
-    state = CONNECTION;
     stopIMU();
-    writeState(state);
-    log_i("Disconnection, state change to CONNECTION");
+    system_reset();
+    log_e("Disconnection, System reset");
   }
   // Request received to change state to ON
   if (state == STANDBY && readState() == ON) {
@@ -178,7 +184,7 @@ void loop_debug() {
 
 void loop_mount() {
   BLE.poll();
-
+  checkStWritten();
   // state transitions
   // Connection, state change directly to ON in debug mode
   if (state == CONNECTION && connectedCentral()) {
@@ -187,13 +193,14 @@ void loop_mount() {
   }
   // Disconnection
   if (state > CONNECTION && !connectedCentral()) {
+    stopIMU();
     system_reset();
     log_e("Disconnection, System reset");
   }
   //button pressed and released
-  bool btn_changed=(old_local_btn_state && !btn())||(old_remote_btn_state && !remoteBtn());
+  bool btn_changed = (old_local_btn_state && !btn()) || (old_remote_btn_state && !remoteBtn());
   old_local_btn_state = btn();
-  old_remote_btn_state=remoteBtn();
+  old_remote_btn_state = remoteBtn();
   if (state == STANDBY && btn_changed) {
     state = ON;
     setRemoteState(ON);
@@ -241,10 +248,9 @@ void loop_cupola() {
   }
   // Disconnection
   if (state > CONNECTION && !connectedPeripheral()) {
-    state = CONNECTION;
     stopIMU();
-    writeState(state);
-    log_i("Disconnection, state change to CONNECTION");
+    system_reset();
+    log_e("Disconnection, System reset");
   }
   // Request received to change state to ON
   if (state == STANDBY && readState() == ON) {
@@ -356,7 +362,7 @@ void loop_cupola() {
 //}
 
 void magReadHandler(BLEDevice central, BLECharacteristic characteristic) {
-  log_d("BLE mag read event");
+  //log_d("BLE mag read event");
   // if the continuous acquisition is OFF, start the IMU for a single measurment
   if (state == STANDBY) {
     initIMUMag();

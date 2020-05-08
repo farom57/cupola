@@ -9,13 +9,12 @@ Led RGB:
     Vert continu: erreur magnetometre, generalement en cas de champ magnetique inhabituel
     Rouge continu: erreur accelerometre, le module etait probablement en mouvement lors de l'initialisation
 
-Dip:
-    1: 
-        - OFF=Monture ou Coupole en fonction du DIP 2
-        - ON=Debug
-    2: 
-        - OFF=Monture, BLE central device
-        - ON=Coupole, BLE peripheral device
+Dip: 
+    1234: +=ON _=OFF X=indifférent
+    +XXX et appui boutton: Mode debug
+    +_+_ et appui boutton: Reset parametres
+    _+XX: Monture
+    __XX: Coupole
         
 Modes de fonctionnement:
 Pour passer d'un mode à l'autre il est necessaire de modifier la position des dip switchs et faire un reset
@@ -59,3 +58,4 @@ Liste service et characteristiques BLE
   44 Raw Z (float)
 50 Alive service
   51 timeout
+60 Settings

@@ -20,8 +20,8 @@ void writeAcc(float acc[]);           // update Acc characteristic
 void writeState(enum states val);     // update State characteristic
 enum states readState();              // read State characteristic
 void updateSwitches();                // update switches characteristics
-bool connectedPeripheral();          // return true if the connection is alive, ignore timeout if switch1 is ON
-
+bool connectedPeripheral();           // return true if the connection is alive, ignore timeout if switch1 is ON
+void checkStWritten();                // check if a setting char has been written and save the setting
 
 //   -------------------------------
 //   ---   Peripheral handlers   ---
@@ -30,6 +30,7 @@ void magReadHandler(BLEDevice central, BLECharacteristic characteristic);       
 void blePeripheralConnectHandler(BLEDevice central);                              // called when a central device tries to connect
 void blePeripheralDisconnectHandler(BLEDevice central);                           // called when a central close the connection
 void connectionAliveHandler(BLEDevice central, BLECharacteristic characteristic); // called when the keepalive characteristic is changed
+
 
 //   ------------------------------------
 //   ---   Central public functions   ---

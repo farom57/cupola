@@ -254,7 +254,7 @@ void updateMag() {
     if (norm(diff) > MAG_CHANGE_THRESHOLD) {
       v_copy(mag_smooth, mag_filt);
       writeMagFilt(mag_filt);
-      log_d("MAG FILT: %f %f %f", mag_filt[0], mag_filt[1], mag_filt[2]);
+      //log_d("MAG FILT: %f %f %f", mag_filt[0], mag_filt[1], mag_filt[2]);
     }
 
 
