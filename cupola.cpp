@@ -89,6 +89,9 @@ void setup() {
 
 
   if (operating_mode == DEBUG) {
+    // test
+    test_math();
+    
     // IMU test
     initIMUMagAcc();
     if (!testIMUMag()) {

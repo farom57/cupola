@@ -23,4 +23,6 @@ void rotx(float angle, float res[]);
 void print_degstr(float rad);
 void print_hourstr(float rad);
 
+void test_math();
+
 #endif

@@ -166,12 +166,12 @@ void m_print(const char msg[], float m[]) {
   for (int j = 0; j < i; j++) {
     printg(" ");
   }
-  printg("%7.3f\t%7.3f\t%7.3f\n\r", m[0], m[1], m[2]);
+  printg("%7.3f\t%7.3f\t%7.3f\n\r", m[3], m[4], m[5]);
 
   for (int j = 0; j < i; j++) {
     printg(" ");
   }
-  printg("%7.3f\t%7.3f\t%7.3f\n\r", m[0], m[1], m[2]);
+  printg("%7.3f\t%7.3f\t%7.3f\n\r", m[6], m[7], m[8]);
 }
 
 void rotx(float angle, float res[]) {
@@ -267,3 +267,81 @@ void print_hourstr(float rad) {
   void hadec_calc(float acc_cal[], float mag_cal[]){
 
   }*/
+
+
+void test_math() {
+  int sz = 3;
+
+  float A[3][3];
+  A[0][0] = 1.;
+  A[0][1] = 2.;
+  A[0][2] = 3.;
+  A[1][0] = 4.;
+  A[1][1] = 5.;
+  A[1][2] = 6.;
+  A[2][0] = 7.;
+  A[2][1] = 8.;
+  A[2][2] = 10.;
+
+  float I[3][3];
+  for (int i = 0; i < sz; i++) {
+    for (int j = 0; j < sz; j++) {
+      I[i][j] = (i == j ? 1. : 0.);
+    }
+  }
+
+  m_print("A: ", (float*)A);
+  m_print("I: ", (float*)I);
+
+  int r = 0;
+
+  for (int j = 0; j < sz; j++) {
+    int k = 0;
+    float val_max = 0;
+    log_("j=%d", j);
+    for (int i = r; i < sz; i++) {
+      if (abs(A[i][j]) > val_max) {
+        val_max = abs(A[i][j]);
+        k = i;
+      }
+    }
+    float pivot = A[k][j];
+    log_(" k=%d pivot=%f", k, pivot);
+    if (val_max > 0) {
+      for (int i = 0; i < sz; i++) {
+        A[k][i] /= pivot;
+        I[k][i] /= pivot;
+      }
+      if (k != r) {
+        log_(" k!=r: k=%d r=%d", k, r);
+        float tmp;
+        for (int i = 0; i < sz; i++) {
+          tmp = A[r][i];
+          A[r][i] = A[k][i];
+          A[k][i] = tmp;
+          tmp = I[r][i];
+          I[r][i] = I[k][i];
+          I[k][i] = tmp;
+        }
+
+      }
+      m_print("A: ", (float*)A);
+      m_print("I: ", (float*)I);
+      log_("reduction");
+      for (int i = 0; i < sz; i++) {
+        if (i != r) {
+          float tmp = A[i][j];
+          for (int l = 0; l < sz; l++) {
+            A[i][l] = A[i][l] - A[r][l] * tmp;
+            I[i][l] = I[i][l] - I[r][l] * tmp;
+          }
+        }
+      }
+      m_print("A: ", (float*)A);
+      m_print("I: ", (float*)I);
+      r = r + 1;
+    }
+  }
+  m_print("A: ", (float*)A);
+  m_print("I: ", (float*)I);
+}

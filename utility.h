@@ -6,7 +6,7 @@ void log_e(char *fmt, ... );
 void log_w(char *fmt, ... );
 void log_i(char *fmt, ... );
 void log_d(char *fmt, ... );
-
+void log_(char *fmt, ... );
 void printg(char *fmt, ... );
 
 
