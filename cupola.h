@@ -4,7 +4,7 @@
 
 
 // Global variables
-enum states {ERR, INIT, SLEEP, CONNECTION, STANDBY, ON, MOVE};
+enum states {ERR, INIT, SLEEP, CONNECTION, STANDBY, ON, MOVE, TEST};
 extern enum states state;
 enum operating_modes {TBD, CUPOLA, MOUNT, DEBUG};
 extern enum operating_modes operating_mode;
@@ -26,6 +26,7 @@ void loop_debug();
 void loop_mount();
 void loop_cupola();
 
+void test_calib();
 //void toggleMode();
 
 // defined in ble.h but implemented in cupola.cpp:

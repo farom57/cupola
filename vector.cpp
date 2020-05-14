@@ -269,29 +269,94 @@ void print_hourstr(float rad) {
   }*/
 
 
-void test_math() {
-  int sz = 3;
 
-  float A[3][3];
-  A[0][0] = 1.;
-  A[0][1] = 2.;
-  A[0][2] = 3.;
-  A[1][0] = 4.;
-  A[1][1] = 5.;
-  A[1][2] = 6.;
-  A[2][0] = 7.;
-  A[2][1] = 8.;
-  A[2][2] = 10.;
 
-  float I[3][3];
+float norm(float v[], int sz) {
+  return sqrt(norm2(v, sz));
+}
+
+float norm2(float v[], int sz) {
+  float res = 0;
+  for (int i = 0; i < sz; i++) {
+    res += v[i] * v[i];
+  }
+  return res;
+}
+
+void normalize(float v[], float res[], int sz) {
+  float n = norm(v);
+  sv_mult(1. / n, v, res, sz);
+}
+
+void m_copy(float m[], float res[], int sz) {
+  for (int i = 0; i < sz; i++) {
+    res[i] = m[i];
+  }
+}
+
+void v_copy(float v[], float res[], int sz) {
+  for (int i = 0; i < sz; i++) {
+    res[i] = v[i];
+  }
+}
+
+void mm_mult(float m[], float n[], float res[], int sz1, int sz2, int sz3) {
+  for (int i = 0; i < sz1; i++) {
+    for (int j = 0; j < sz3; j++) {
+      res[sz3 * i + j] = 0;
+      for (int k = 0; k < sz2; k++) {
+        res[sz3 * i + j] += m[sz2 * i + k]*n[sz3 * k + j] ;
+      }
+    }
+  }
+}
+
+void mv_mult(float m[], float v[], float res[], int sz1, int sz2) {
+  mm_mult(m, v, res, sz1, sz2, 1);
+}
+
+void sv_mult(float s, float v[], float res[], int sz) {
+  for (int i = 0; i < sz; i++) {
+    res[i] = s * v[i];
+  }
+}
+
+void m_print(const char msg[], float* m, int sz1, int sz2) {
+  int p = 0;
+  char buf[10];
+
+  while (msg[p] != 0) {
+    printg("%c", msg[p]);
+    p++;
+  }
+  for (int j = 0; j < sz2; j++) {
+    printg("%7.3f\t", m[j]);
+  }
+  printg("\n\r");
+
+  for (int i = 1; i < sz1; i++) {
+    for (int j = 0; j < p; j++) {
+      printg(" ");
+    }
+    for (int j = 0; j < sz2; j++) {
+      printg("%7.3f\t", m[sz2*i+j]);
+    }
+    printg("\n\r");
+  }
+}
+
+// matrix inversion
+// WARNING: A is modified in the process (transformed to the unit matrix through the Gauss-Jordan algorithm)
+void inv(float A[],float I[], int sz){
+
   for (int i = 0; i < sz; i++) {
     for (int j = 0; j < sz; j++) {
-      I[i][j] = (i == j ? 1. : 0.);
+      I[i*sz+j] = (i == j ? 1 : 0);
     }
   }
 
-  m_print("A: ", (float*)A);
-  m_print("I: ", (float*)I);
+  m_print("A: ", (float*)A,sz,sz);
+  m_print("I: ", (float*)I,sz,sz);
 
   int r = 0;
 
@@ -300,48 +365,48 @@ void test_math() {
     float val_max = 0;
     log_("j=%d", j);
     for (int i = r; i < sz; i++) {
-      if (abs(A[i][j]) > val_max) {
-        val_max = abs(A[i][j]);
+      if (abs(A[i*sz+j]) > val_max) {
+        val_max = abs(A[i*sz+j]);
         k = i;
       }
     }
-    float pivot = A[k][j];
+    float pivot = A[k*sz+j];
     log_(" k=%d pivot=%f", k, pivot);
     if (val_max > 0) {
       for (int i = 0; i < sz; i++) {
-        A[k][i] /= pivot;
-        I[k][i] /= pivot;
+        A[k*sz+i] /= pivot;
+        I[k*sz+i] /= pivot;
       }
       if (k != r) {
         log_(" k!=r: k=%d r=%d", k, r);
         float tmp;
         for (int i = 0; i < sz; i++) {
-          tmp = A[r][i];
-          A[r][i] = A[k][i];
-          A[k][i] = tmp;
-          tmp = I[r][i];
-          I[r][i] = I[k][i];
-          I[k][i] = tmp;
+          tmp = A[r*sz+i];
+          A[r*sz+i] = A[k*sz+i];
+          A[k*sz+i] = tmp;
+          tmp = I[r*sz+i];
+          I[r*sz+i] = I[k*sz+i];
+          I[k*sz+i] = tmp;
         }
 
       }
-      m_print("A: ", (float*)A);
-      m_print("I: ", (float*)I);
+      m_print("A: ", (float*)A,sz,sz);
+      m_print("I: ", (float*)I,sz,sz);
       log_("reduction");
       for (int i = 0; i < sz; i++) {
         if (i != r) {
-          float tmp = A[i][j];
+          float tmp = A[i*sz+j];
           for (int l = 0; l < sz; l++) {
-            A[i][l] = A[i][l] - A[r][l] * tmp;
-            I[i][l] = I[i][l] - I[r][l] * tmp;
+            A[i*sz+l] = A[i*sz+l] - A[r*sz+l] * tmp;
+            I[i*sz+l] = I[i*sz+l] - I[r*sz+l] * tmp;
           }
         }
       }
-      m_print("A: ", (float*)A);
-      m_print("I: ", (float*)I);
+      m_print("A: ", (float*)A,sz,sz);
+      m_print("I: ", (float*)I,sz,sz);
       r = r + 1;
     }
   }
-  m_print("A: ", (float*)A);
-  m_print("I: ", (float*)I);
+  m_print("A: ", (float*)A,sz,sz);
+  m_print("I: ", (float*)I,sz,sz);
 }

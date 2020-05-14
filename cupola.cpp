@@ -26,6 +26,10 @@ float mag_filt[3];
 float mag_filt_remote[3];
 float acc_filt[3];
 
+#define N_SAMPLE 36
+float test_calib_mag[3][N_SAMPLE];
+float test_calib_acc[3][N_SAMPLE];
+int current_sample = 0;
 
 void setup() {
 
@@ -89,9 +93,6 @@ void setup() {
 
 
   if (operating_mode == DEBUG) {
-    // test
-    test_math();
-    
     // IMU test
     initIMUMagAcc();
     if (!testIMUMag()) {
@@ -157,6 +158,24 @@ void loop_debug() {
     writeState(state);
     log_i("State change received, state change to STANDBY");
   }
+
+  //start mag calibration test
+  if (switch_2() && btn()) {
+    state = TEST;
+    initIMUMagAcc();
+    writeMagRaw(mag_raw);
+    writeMagFilt(mag_filt);
+    writeState(state);
+    log_i("Test calibration mode");
+    current_sample = 0;
+  }
+  if (current_sample >= N_SAMPLE) {
+    state = STANDBY;
+    stopIMU();
+    writeState(state);
+    test_calib();
+    current_sample = 0;
+  }
   // Error
   if (acc_error_flag || mag_error_flag) {
     //in debug mode, error are displayed with the led but ignored
@@ -182,7 +201,110 @@ void loop_debug() {
     updateAcc();
     delay(100);
   }
+  if (state == TEST) {
+    ledRYG(false, true, true);
+    ledRGB(true, true, true);
+    //updateSwitches();
+    updateMag();
+    updateAcc();
+    test_calib_mag[0][current_sample] = mag_raw[0];
+    test_calib_mag[1][current_sample] = mag_raw[1];
+    test_calib_mag[2][current_sample] = mag_raw[2];
+    test_calib_acc[0][current_sample] = acc_filt[0];
+    test_calib_acc[1][current_sample] = acc_filt[1];
+    test_calib_acc[2][current_sample] = acc_filt[2];
+    v_print("mag: ", mag_raw);
+    v_print("acc: ", acc_filt);
+    current_sample++;
+    delay(900);
+    ledRGB(false, false, true);
+    delay(100);
+  }
 
+}
+
+void test_calib() {
+  float acc_mean[3] = {0};
+  float X[3] = {0};
+  float Y[3] = {0};
+  float Z[3] = {0};
+  float dir[3] = {0};
+  float XYZt[3][3] = {0};
+  float M_XYZ[3][N_SAMPLE] = {0};
+  m_print("acc: ", (float*)test_calib_acc, 3, N_SAMPLE);
+  for (int i = 0; i < N_SAMPLE; i++) {
+    acc_mean[0] += test_calib_acc[0][i];
+    acc_mean[1] += test_calib_acc[1][i];
+    acc_mean[2] += test_calib_acc[2][i];
+  }
+  acc_mean[0] /= N_SAMPLE;
+  acc_mean[1] /= N_SAMPLE;
+  acc_mean[2] /= N_SAMPLE;
+  v_print("acc_mean: ", acc_mean);
+  sv_mult(1. / norm(acc_mean), acc_mean, Z);
+  v_print("Z: ", Z);
+  dir[abs(Z[0]) > abs(Z[1]) ? 1 : 0] = 1.;
+  v_print("dir: ", dir);
+  vect_prod(Z, dir, Y);
+  normalize(Y, Y);
+  v_print("Y: ", Y);
+  vect_prod(Y, Z, X);
+  v_print("X: ", X);
+  for (int i = 0; i < N_SAMPLE; i++) {
+    XYZt[0][i] = X[i];
+    XYZt[1][i] = Y[i];
+    XYZt[2][i] = Z[i];
+  }
+  m_print("mag: ", (float*)test_calib_mag, 3, N_SAMPLE);
+  mm_mult((float*)XYZt, (float*)test_calib_mag, (float*)M_XYZ, 3, 3, N_SAMPLE);
+  m_print("M_XYZ: ", (float*)M_XYZ, 3, N_SAMPLE);
+  float A[N_SAMPLE][4];
+  for (int i = 0; i < N_SAMPLE; i++) {
+    A[i][0] = M_XYZ[0][i] * M_XYZ[0][i];
+    A[i][1] = M_XYZ[1][i] * M_XYZ[1][i];
+    A[i][2] = M_XYZ[0][i];
+    A[i][3] = M_XYZ[1][i];
+  }
+
+  // solving A.(a;b;c;d)=(1;...;1)
+  // pseudo-solution is beta=(A' * A)^-1 * A' * (1;...;1)
+  // B = A' * A
+  float B[4][4];
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      B[i][j] = 0;
+      for (int k = 0; k < N_SAMPLE; k++) {
+        B[i][j] += A[k][i] * A[k][j] ;
+      }
+    }
+  }
+  m_print("B: ",(float*)B,4,4);
+  float Binv[4][4];
+  inv((float*)B, (float*)Binv, 4);
+  // finally beta = Binv * A' * (1;...;1) = sum along the row of Binv * A'
+  float beta[4] = {0};
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < N_SAMPLE; j++) {
+      for (int k = 0; k < 4; k++) {
+        beta[i] += Binv[i][k] * A[j][k];
+      }
+    }
+  }
+  m_print("beta: ", beta, 4,1);
+  float Cx, Cy, Cx0, Cy0,Cz;
+  Cx0=-beta[2]/beta[0]/2.;
+  Cy0=-beta[3]/beta[1]/2.;
+  Cx=1./sqrt(beta[0]/(1.+Cx0*Cx0*beta[0]+Cy0*Cy0*beta[1]));
+  Cy=Cx*beta[1]/beta[0];
+
+  log_("Bias:\t%f\t%f",Cx0,Cy0);
+  log_("Horz field:\t%f\t%f",Cx,Cy);
+  Cz=0;
+  for(int i=0;i<N_SAMPLE;i++){
+    Cz+=M_XYZ[2][i];
+  }
+  Cz/=N_SAMPLE;
+  log_("Vert field:\t%f",Cz);
 }
 
 void loop_mount() {

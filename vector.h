@@ -23,6 +23,32 @@ void rotx(float angle, float res[]);
 void print_degstr(float rad);
 void print_hourstr(float rad);
 
+float norm(float v[], int sz);
+float norm2(float v[], int sz); // =norm^2
+void normalize(float v[], float res[], int sz);
+void m_copy(float m[], float res[], int sz);
+void v_copy(float v[], float res[], int sz);
+void mm_mult(float m[], float n[], float res[], int sz1, int sz2, int sz3);
+void mv_mult(float m[], float v[], float res[], int sz1, int sz2);
+void sv_mult(float s, float v[], float res[], int sz);
+void m_print(const char msg[], float* m, int sz1, int sz2);
+void inv(float A[],float I[], int sz);
+
+
+/*void v_lincomb(float a, float u[], float b, float v[], float res[]); // a*u+b*v
+  void sm_mult(float s, float m[], float res[]);
+  void transpose(float m[], float res[]);
+  float scalar_prod(float u[], float v[]);
+  void vect_prod(float u[], float v[], float res[]);
+  void v_add(float u[], float v[], float res[]);
+  void v_sub(float u[], float v[], float res[]); //u-v
+  void vect_cat(float u[], float v[], float w[], float res[]);
+  void v_print(const char msg[], float v[]);
+  void m_print(const char msg[], float m[]);
+  void rotx(float angle, float res[]);
+  void print_degstr(float rad);
+  void print_hourstr(float rad);*/
+
 void test_math();
 
 #endif
