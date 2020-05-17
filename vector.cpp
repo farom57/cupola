@@ -363,7 +363,7 @@ void inv(float A[],float I[], int sz){
   for (int j = 0; j < sz; j++) {
     int k = 0;
     float val_max = 0;
-    log_("j=%d", j);
+    //log_("j=%d", j);
     for (int i = r; i < sz; i++) {
       if (abs(A[i*sz+j]) > val_max) {
         val_max = abs(A[i*sz+j]);
@@ -371,14 +371,14 @@ void inv(float A[],float I[], int sz){
       }
     }
     float pivot = A[k*sz+j];
-    log_(" k=%d pivot=%f", k, pivot);
+    //log_(" k=%d pivot=%f", k, pivot);
     if (val_max > 0) {
       for (int i = 0; i < sz; i++) {
         A[k*sz+i] /= pivot;
         I[k*sz+i] /= pivot;
       }
       if (k != r) {
-        log_(" k!=r: k=%d r=%d", k, r);
+        //log_(" k!=r: k=%d r=%d", k, r);
         float tmp;
         for (int i = 0; i < sz; i++) {
           tmp = A[r*sz+i];
@@ -390,9 +390,9 @@ void inv(float A[],float I[], int sz){
         }
 
       }
-      m_print("A: ", (float*)A,sz,sz);
-      m_print("I: ", (float*)I,sz,sz);
-      log_("reduction");
+      //m_print("A: ", (float*)A,sz,sz);
+      //m_print("I: ", (float*)I,sz,sz);
+      //log_("reduction");
       for (int i = 0; i < sz; i++) {
         if (i != r) {
           float tmp = A[i*sz+j];
@@ -402,8 +402,8 @@ void inv(float A[],float I[], int sz){
           }
         }
       }
-      m_print("A: ", (float*)A,sz,sz);
-      m_print("I: ", (float*)I,sz,sz);
+      //m_print("A: ", (float*)A,sz,sz);
+      //m_print("I: ", (float*)I,sz,sz);
       r = r + 1;
     }
   }

@@ -3,11 +3,20 @@
 #include "KVStore.h"
 #include "kvstore_global_api.h"
 
-char st_keys[ST_NB][ST_KEY_LEN] = {"/kv/startup", "/kv/test_int", "/kv/test_float", "/kv/test_string"};
-int kv_startup = 0;
-int kv_test_int = 0;
-float kv_test_float = 0.0;
-char kv_test_string[ST_VAL_LEN] = {""};
+char st_keys[ST_NB][ST_KEY_LEN] = {
+  "/kv/startup",
+  "/kv/compass_bias_x", "/kv/compass_bias_y",
+  "/kv/compass_amp_x", "/kv/compass_amp_y", "/kv/compass_amp_z",
+  "/kv/compass_rot_00", "/kv/compass_rot_01", "/kv/compass_rot_02", "/kv/compass_rot_10", "/kv/compass_rot_11", "/kv/compass_rot_12", "/kv/compass_rot_20", "/kv/compass_rot_21", "/kv/compass_rot_22"
+};
+int st_startup;
+float st_compass_bias_x;
+float st_compass_bias_y;
+float st_compass_amp_x;
+float st_compass_amp_y;
+float st_compass_amp_z;
+float st_compass_rot[3][3];
+
 
 // reset setting storage
 void resetSt() {
@@ -18,14 +27,26 @@ void resetSt() {
 // load setings from the flash
 void loadSt() {
   defaultSt();
-  readIntSt(st_keys[0], &kv_startup);
-  readIntSt(st_keys[1], &kv_test_int);
-  readFloatSt(st_keys[2], &kv_test_float);
-  readSt(st_keys[3], kv_test_string);
+  readIntSt(st_keys[0], &st_startup);
+  readFloatSt(st_keys[1], &st_compass_bias_x);
+  readFloatSt(st_keys[2], &st_compass_bias_y);
+  readFloatSt(st_keys[3], &st_compass_amp_x);
+  readFloatSt(st_keys[4], &st_compass_amp_y);
+  readFloatSt(st_keys[5], &st_compass_amp_z);
+  readFloatSt(st_keys[6], &st_compass_rot[0][0]);
+  readFloatSt(st_keys[7], &st_compass_rot[0][1]);
+  readFloatSt(st_keys[8], &st_compass_rot[0][2]);
+  readFloatSt(st_keys[9], &st_compass_rot[1][0]);
+  readFloatSt(st_keys[10], &st_compass_rot[1][1]);
+  readFloatSt(st_keys[11], &st_compass_rot[1][2]);
+  readFloatSt(st_keys[12], &st_compass_rot[2][0]);
+  readFloatSt(st_keys[13], &st_compass_rot[2][1]);
+  readFloatSt(st_keys[14], &st_compass_rot[2][2]);
 
-  kv_startup++;
+
+  st_startup++;
   char buf[ST_VAL_LEN];
-  sprintf(buf, "%d", kv_startup);
+  sprintf(buf, "%d", st_startup);
   saveSt(st_keys[0], buf, strlen(buf));
   //log_d("%s=%i", st_keys[0], kv_startup);
 
@@ -42,19 +63,21 @@ void defaultSt() {
 void saveSt(const char* key, const char* val, int len) {
   int res;
   char tmp[ST_VAL_LEN];
-  
+
   // force zero trailling
   len = min(len, ST_VAL_LEN - 1);
   memcpy(tmp, val, len);
   tmp[len] = 0;
 
   log_i("Saving setting %s=%s", key, tmp);
-  
+
   res = kv_set(key, tmp, len + 1, 0);
   if (res != 0) {
     log_e("Error during setting saving. Error code: %d", res);
   }
 }
+
+
 
 
 // read the setting and store the result in val char array. The number of char read is returned
@@ -104,14 +127,41 @@ bool readFloatSt(const char* key, float* val) {
     log_e("Error while reading %s = %s. Actual_size: %d Error code: %d", key, buf, actual_size, res);
     return false;
   }
-  res = sscanf(buf, "%f", &tmp);
-  if (res == 1) {
+
+  errno=0;
+  tmp=atof(buf);
+  if (errno == 0) {
     *val = tmp;
     return true;
   } else {
-    log_w("Error while reading %s = %s. Incorrect formating", key, buf);
+    log_w("Error while reading %s = %s. Incorrect formating %d %f", key, buf, errno, tmp);
     char err[] = "format error";
     res = kv_set(key, err, strlen(err) + 1, 0);
     return false;
   }
+}
+
+// save setting
+void saveFloatSt(const char* key, float val) {
+  char buf[ST_VAL_LEN];
+  sprintf(buf, "%.9g", val);
+  saveSt(key, buf, strlen(buf));
+}
+
+void saveCompassCalib() {
+  saveFloatSt(st_keys[1], st_compass_bias_x);
+  saveFloatSt(st_keys[2], st_compass_bias_y);
+  saveFloatSt(st_keys[3], st_compass_amp_x);
+  saveFloatSt(st_keys[4], st_compass_amp_y);
+  saveFloatSt(st_keys[5], st_compass_amp_z);
+  saveFloatSt(st_keys[6], st_compass_rot[0][0]);
+  saveFloatSt(st_keys[7], st_compass_rot[0][1]);
+  saveFloatSt(st_keys[8], st_compass_rot[0][2]);
+  saveFloatSt(st_keys[9], st_compass_rot[1][0]);
+  saveFloatSt(st_keys[10], st_compass_rot[1][1]);
+  saveFloatSt(st_keys[11], st_compass_rot[1][2]);
+  saveFloatSt(st_keys[12], st_compass_rot[2][0]);
+  saveFloatSt(st_keys[13], st_compass_rot[2][1]);
+  saveFloatSt(st_keys[14], st_compass_rot[2][2]);
+  loadSt();
 }

@@ -26,20 +26,29 @@
 
 #define DEBOUNCE_DELAY 50
 
-#define ST_NB 4
+#define ST_NB 15
 #define ST_KEY_LEN 32
 #define ST_VAL_LEN 32
 
 extern char st_keys[ST_NB][ST_KEY_LEN];
+extern int st_startup;
+extern float st_compass_bias_x;
+extern float st_compass_bias_y;
+extern float st_compass_amp_x;
+extern float st_compass_amp_y;
+extern float st_compass_amp_z;
+extern float st_compass_rot[3][3];
 
 void resetSt();                                 // reset setting storage
 void loadSt();                                  // load setings from the flash
 void defaultSt();                               // set default settings
 void saveSt(const char* key, const char* val, int len); // save setting
+void saveFloatSt(const char* key, float val);   // save setting
 int readSt(const char* key, char* val);         // read the setting and store the result in val char array. The number of char read is returned
 bool readIntSt(const char* key, int* val);      // read the setting and store the result in val. In case of error, val is not modified and false is returned
 bool readFloatSt(const char* key, float* val);  // read the setting and store the result in val. In case of error, val is not modified and false is returned
 
+void saveCompassCalib();
 //void stReadHandler(BLEDevice central, BLECharacteristic characteristic);
 //void stWriteHandler(BLEDevice central, BLECharacteristic characteristic);
 

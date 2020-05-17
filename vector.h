@@ -49,6 +49,5 @@ void inv(float A[],float I[], int sz);
   void print_degstr(float rad);
   void print_hourstr(float rad);*/
 
-void test_math();
 
 #endif

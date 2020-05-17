@@ -13,6 +13,18 @@
 #define K_SMOOTH 0.1
 #define MAG_CHANGE_THRESHOLD 2.
 
+#define CALIB_SAMPLES 10
+#define CALIB_PERIOD 1000
+
+extern bool acc_error_flag;
+extern bool mag_error_flag;
+
+extern float mag_raw[3];
+extern float mag_smooth[3];
+extern float mag_filt[3];
+extern float mag_filt_remote[3];
+extern float acc_filt[3];
+extern int current_calib_sample;
 
 void initIMUMag();
 void initIMUMagAcc();
@@ -30,12 +42,12 @@ void readAccConv(float res[]);
 void updateMag();
 void updateAcc();
 
-
-
 int readRegister(uint8_t slaveAddress, uint8_t address);
 int readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* data, size_t length);
 int writeRegister(uint8_t slaveAddress, uint8_t address, uint8_t value);
 
-
+void sampleCalib();   // Acquire and save calibration sample
+void compassCalibCalc();  // Compute compass calibration parameters
+void compassCalib(float in[], float res[]); // correct res
 
 #endif

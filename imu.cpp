@@ -29,7 +29,18 @@
 #define LSM9DS1_STATUS_REG_M       0x27
 #define LSM9DS1_OUT_X_L_M          0x28
 
+float mag_raw[3];
+float mag_smooth[3];
+float mag_filt[3];
+float mag_filt_remote[3];
+float acc_filt[3];
+bool acc_error_flag = false;
+bool mag_error_flag = false;
 
+
+float calib_mag[3][CALIB_SAMPLES];
+float calib_acc[3][CALIB_SAMPLES];
+int current_calib_sample = 0;
 
 
 void initIMUMag() {
@@ -166,12 +177,12 @@ void readMag(int16_t data[]) {
 void readMagConv(float res[]) {
   int16_t data[3];
   readRegisters(LSM9DS1_ADDRESS_M, LSM9DS1_OUT_X_L_M, (uint8_t*)data, 6);
-  res[0] = constrain(data[0] * 400. / 32768., -99., 99.);
-  res[1] = constrain(data[1] * 400. / 32768., -99., 99.);
-  res[2] = constrain(data[2] * 400. / 32768., -99., 99.);
-  //res[0]=data[0]*400./32768.;
-  //res[1]=data[1]*400./32768.;
-  //res[2]=data[2]*400./32768.;
+  //res[0] = constrain(data[0] * 400. / 32768., -99., 99.);
+  //res[1] = constrain(data[1] * 400. / 32768., -99., 99.);
+  //res[2] = constrain(data[2] * 400. / 32768., -99., 99.);
+  res[0] = data[0] * 400. / 32768.;
+  res[1] = data[1] * 400. / 32768.;
+  res[2] = data[2] * 400. / 32768.;
 
 }
 
@@ -284,4 +295,150 @@ void updateAcc() {
     }
   }
 
+}
+// Acquire and save calibration sample
+void sampleCalib() {
+  int errorCount = 0;
+
+  while (!(magAvailable()&accAvailable()) && errorCount < 5) {
+    errorCount++;
+    delay(100);
+  }
+
+  if (errorCount >= 5) {
+    acc_error_flag = !accAvailable();
+    acc_error_flag = !magAvailable();
+    current_calib_sample--;
+    log_e("IMU error %s:%d", __FILE__, __LINE__);
+    return;
+  }
+
+  readMagConv(mag_raw);
+  readAccConv(acc_filt);
+  calib_mag[0][current_calib_sample] = mag_raw[0];
+  calib_mag[1][current_calib_sample] = mag_raw[1];
+  calib_mag[2][current_calib_sample] = mag_raw[2];
+  calib_acc[0][current_calib_sample] = acc_filt[0];
+  calib_acc[1][current_calib_sample] = acc_filt[1];
+  calib_acc[2][current_calib_sample] = acc_filt[2];
+}
+
+// Compute compass calibration parameters
+void compassCalibCalc() {
+  float acc_mean[3] = {0};
+  float X[3] = {0};
+  float Y[3] = {0};
+  float Z[3] = {0};
+  float dir[3] = {0};
+  float XYZt[3][3] = {0};
+  float M_XYZ[3][CALIB_SAMPLES] = {0};
+
+  // Compute vertical direction that is also the rotation axis
+  for (int i = 0; i < CALIB_SAMPLES; i++) {
+    acc_mean[0] += calib_acc[0][i];
+    acc_mean[1] += calib_acc[1][i];
+    acc_mean[2] += calib_acc[2][i];
+  }
+  acc_mean[0] /= CALIB_SAMPLES;
+  acc_mean[1] /= CALIB_SAMPLES;
+  acc_mean[2] /= CALIB_SAMPLES;
+  v_print("acc_mean: ", acc_mean);
+
+  // Trasform the mag measurment in referential XYZ where Z is the rotation axis
+  sv_mult(1. / norm(acc_mean), acc_mean, Z);
+  v_print("Z: ", Z);
+  dir[abs(Z[0]) < 0.5 ? 0 : 1] = 1.;
+  v_print("dir: ", dir);
+  vect_prod(Z, dir, Y);
+  normalize(Y, Y);
+  v_print("Y: ", Y);
+  vect_prod(Y, Z, X);
+  v_print("X: ", X);
+  for (int i = 0; i < CALIB_SAMPLES; i++) {
+    XYZt[i][0] = X[i];
+    XYZt[i][1] = Y[i];
+    XYZt[i][2] = Z[i];
+  }
+
+  mm_mult((float*)XYZt, (float*)calib_mag, (float*)M_XYZ, 3, 3, CALIB_SAMPLES);
+
+  // Search bias_X, bias_Y, amp_X and amp_Y such as ((M_X-bias_X)/amp_X)² + ((M_Y-bias_Y)/amp_Y)² = 1
+
+  // Firt solve a*M_X² + b*M_Y² + c*M_X + d*M_Y = 1 for all the samples
+  // Matricialy A*beta=ONES with A=[M_X² M_Y² M_X M_Y] beta=[a;b;c;d] ONES=[1;1;1;1;...]
+  // optimal solution is beta = Pinv(A)*ONES=(A' * A)^-1 * A' * [1;1;1;1;...]
+
+  // Build A
+  float A[CALIB_SAMPLES][4];
+  for (int i = 0; i < CALIB_SAMPLES; i++) {
+    A[i][0] = M_XYZ[0][i] * M_XYZ[0][i];
+    A[i][1] = M_XYZ[1][i] * M_XYZ[1][i];
+    A[i][2] = M_XYZ[0][i];
+    A[i][3] = M_XYZ[1][i];
+  }
+
+
+  // Compute pseudo-solution beta=(A' * A)^-1 * A' * (1;...;1)
+  // B = A' * A
+  float B[4][4];
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < 4; j++) {
+      B[i][j] = 0;
+      for (int k = 0; k < CALIB_SAMPLES; k++) {
+        B[i][j] += A[k][i] * A[k][j] ;
+      }
+    }
+  }
+
+  // inverse B
+  float Binv[4][4];
+  inv((float*)B, (float*)Binv, 4);
+
+  // finally beta = Binv * A' * (1;...;1) = sum along the row of Binv * A'
+  float beta[4] = {0};
+  for (int i = 0; i < 4; i++) {
+    for (int j = 0; j < CALIB_SAMPLES; j++) {
+      for (int k = 0; k < 4; k++) {
+        beta[i] += Binv[i][k] * A[j][k];
+      }
+    }
+  }
+
+  // compute bias_X, bias_Y, amp_X and amp_Y from beta
+  m_print("beta: ", beta, 4, 1);
+  float amp_X, amp_Y, amp_Z, bias_X, bias_Y;
+  bias_X = -beta[2] / beta[0] / 2.;
+  bias_Y = -beta[3] / beta[1] / 2.;
+  amp_X = 1. / sqrt(beta[0] / (1. + bias_X * bias_X * beta[0] + bias_Y * bias_Y * beta[1]));
+  amp_Y = amp_X * beta[1] / beta[0];
+
+  log_("Bias:\t%f\t%f", bias_X, bias_Y);
+
+  amp_Z = 0;
+  for (int i = 0; i < CALIB_SAMPLES; i++) {
+    amp_Z += M_XYZ[2][i];
+  }
+  amp_Z /= CALIB_SAMPLES;
+  log_d("Vert field:\t%f", amp_Z);
+  log_d("Horizontal field:\t%f\t%f", amp_X, amp_Y);
+
+  // check_validity: horizontal field should be around 23.7 for Cannes, France
+  if (amp_X > 10 && amp_X < 70 && amp_Y > 10 && amp_Y < 70 && amp_X / amp_Y < 1.1 && amp_X / amp_Y > 0.9) {
+    st_compass_bias_x = bias_X;
+    st_compass_bias_y = bias_Y;
+    st_compass_amp_x = amp_X;
+    st_compass_amp_y = amp_Y;
+    st_compass_amp_z = amp_Z;
+    m_copy((float*)XYZt, (float*)st_compass_rot);
+    saveCompassCalib();
+  } else {
+    log_e("Invalid compass calibration parameters %s:%d", __FILE__, __LINE__);
+  }
+}
+
+void compassCalib(float in[], float res[]){
+  mv_mult((float*)st_compass_rot, in, res);
+  res[0]=(res[0]-st_compass_bias_x)/st_compass_amp_x;
+  res[1]=(res[1]-st_compass_bias_y)/st_compass_amp_y;
+  res[2]=res[2]/st_compass_amp_z;
 }
