@@ -13,7 +13,7 @@
 #define K_SMOOTH 0.1
 #define MAG_CHANGE_THRESHOLD 2.
 
-#define CALIB_SAMPLES 10
+#define CALIB_SAMPLES 11
 #define CALIB_PERIOD 100
 
 extern bool acc_error_flag;
