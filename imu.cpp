@@ -194,7 +194,7 @@ void readAccConv(float res[]) {
   int16_t data[3];
   readRegisters(LSM9DS1_ADDRESS, LSM9DS1_OUT_X_XL, (uint8_t*)data, 6);
   res[0] = data[0] * 2. / 32768.;
-  res[1] = data[1] * 2. / 32768.;
+  res[1] = data[1] * -2. / 32768.; //acc Y axis seems to be inverted on the board
   res[2] = data[2] * 2. / 32768.;
 }
 

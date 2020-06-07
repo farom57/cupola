@@ -157,10 +157,10 @@ void loop_debug() {
     initIMUMagAcc();
     writeState(state);
     log_i("Compass calibration mode");
-    log_d("Mag_x  \tMag_y  \tMag_z  \tAcc_x  \tAcc_y  \tAcc_z  \t");
+    log_("Mag_x  \tMag_y  \tMag_z  \tAcc_x  \tAcc_y  \tAcc_z  \t");
     current_calib_sample = 0;
-
   }
+
   if (current_calib_sample >= CALIB_SAMPLES) {
     stopIMU();
     state = connectedPeripheral() ? STANDBY : CONNECTION;
@@ -168,6 +168,24 @@ void loop_debug() {
     compassCalibCalc();
     current_calib_sample = 0;
   }
+
+  if(state==LOG_SENSOR && btn()){
+    stopIMU();
+    state = connectedPeripheral() ? STANDBY : CONNECTION;
+    writeState(state);
+    current_calib_sample = 0;
+  }
+  
+  if (switch_1() && !switch_2() && !switch_3() && !switch_4() && btn()) {
+    state = LOG_SENSOR;
+    initIMUMagAcc();
+    writeState(state);
+    log_i("Sensor log mode");
+    log_("Mag_x  \tMag_y  \tMag_z  \tAcc_x  \tAcc_y  \tAcc_z  \t");
+    current_calib_sample = 0;
+  }
+
+
 
   ledRYG(false, false, false);
   ledRGB(false, false, false);
@@ -193,17 +211,26 @@ void loop_debug() {
     compassCalib(mag_raw,mag_calib);
     float heading=atan2(mag_calib[1],mag_calib[0])*360./2./PI;
     
-    log_d("%fdeg\t%f\t%f\t%f\t%f",heading, mag_calib[0],mag_calib[1],mag_calib[2],norm(mag_calib)); 
+    log_("%fdeg\t%f\t%f\t%f\t%f",heading, mag_calib[0],mag_calib[1],mag_calib[2],norm(mag_calib)); 
     delay(100);
   }
   if (state == COMPASS_CALIB) {
     ledRYG(false, true, true);
     ledRGB(true, true, true);
     sampleCalib();
-    log_d("%7.3f\t%7.3f\t%7.3f\t%7.3f\t%7.3f\t%7.3f\t",mag_raw[0],mag_raw[1],mag_raw[2],acc_filt[0],acc_filt[1],acc_filt[2]);
+    log_("%7.3f\t%7.3f\t%7.3f\t%7.3f\t%7.3f\t%7.3f\t",mag_raw[0],mag_raw[1],mag_raw[2],acc_filt[0],acc_filt[1],acc_filt[2]);
     current_calib_sample++;
     delay(CALIB_PERIOD);
   }
+
+  if (state == LOG_SENSOR) {
+    ledRYG(false, true, true);
+    ledRGB(true, true, true);
+    sampleCalib();
+    log_d("%f\t%f\t%f\t%f\t%f\t%f\t",mag_raw[0],mag_raw[1],mag_raw[2],acc_filt[0],acc_filt[1],acc_filt[2]);
+    delay(CALIB_PERIOD);
+  }
+
 
   // Error
   if (acc_error_flag || mag_error_flag) {

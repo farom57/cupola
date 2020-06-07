@@ -14,7 +14,7 @@
 #define MAG_CHANGE_THRESHOLD 2.
 
 #define CALIB_SAMPLES 10
-#define CALIB_PERIOD 1000
+#define CALIB_PERIOD 100
 
 extern bool acc_error_flag;
 extern bool mag_error_flag;

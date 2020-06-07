@@ -4,7 +4,7 @@
 
 
 // Global variables
-enum states {ERR, INIT, SLEEP, CONNECTION, STANDBY, ON, COMPASS_CALIB};
+enum states {ERR, INIT, SLEEP, CONNECTION, STANDBY, ON, COMPASS_CALIB, LOG_SENSOR};
 extern enum states state;
 enum operating_modes {TBD, CUPOLA, MOUNT, DEBUG};
 extern enum operating_modes operating_mode;

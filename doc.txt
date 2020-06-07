@@ -13,6 +13,8 @@ Dip:
     1234: +=ON _=OFF X=indifférent
     +XXX et appui boutton: Mode debug
     +_+_ et appui boutton: Reset parametres
+    +___ et appui boutton: Log magnetometre et accelerometre
+    ++__ et appui boutton: Calibration boussole
     _+XX: Monture
     __XX: Coupole
         
@@ -27,6 +29,9 @@ Pour passer d'un mode à l'autre il est necessaire de modifier la position des d
 
     Debug: 
     Le mode debug permet de se connecter au module au moyen d'un smartphone ou d'un PC en bluetooth. Applications Android recommandées: NRF Connect et Lightblue. Il est necessaire d'appuyer pour lancer l'initialisation.
+    
+    Calibration boussole:
+    Ce mode permet de calibrer le magnetometre pour le module coupole. Appuyez une première fois sur le boutton pour l'initialisation puis une seconde fois pour lancer la calibrationqui dure 2min. La Led RGB reste blanche durant la calibration. Pendant toute la periode, il faut faire tourner manuellement la coupole.
     
 Communication serie à 57600baud
 
