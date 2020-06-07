@@ -17,7 +17,8 @@ function [A,bias,sigma]=compute_calibration(measurements, angles, theory)
   X=pinv(M)*h;
   A=[X(1) X(2) X(3);X(4) X(5) X(6);X(7) X(8) X(9)]';
   bias=[X(10);X(11);X(12)];
-  M*X-h
-  sigma=sqrt(sumsq(M*X-h)/3/N);
+
+  error=calibrate(measurements,A,bias)-F;
+  sigma=sqrt(sumsq(error(:))/3/N);
   
 endfunction
