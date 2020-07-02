@@ -185,7 +185,10 @@ void loop_debug() {
     current_calib_sample = 0;
   }
 
-
+  //test
+  if (switch_1() && switch_2() && switch_3() && !switch_4() && btn()) {
+    test();
+  }
 
   ledRYG(false, false, false);
   ledRGB(false, false, false);

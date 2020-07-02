@@ -436,9 +436,126 @@ void compassCalibCalc() {
   }
 }
 
-void compassCalib(float in[], float res[]){
+void compassCalib(float in[], float res[]) {
   mv_mult((float*)st_compass_rot, in, res);
-  res[0]=(res[0]-st_compass_bias_x)/st_compass_amp_x;
-  res[1]=(res[1]-st_compass_bias_y)/st_compass_amp_y;
-  res[2]=res[2]/st_compass_amp_z;
+  res[0] = (res[0] - st_compass_bias_x) / st_compass_amp_x;
+  res[1] = (res[1] - st_compass_bias_y) / st_compass_amp_y;
+  res[2] = res[2] / st_compass_amp_z;
+}
+
+// calibrate mount measurements
+// raw (3 x N)
+// calibrated (3 x N)
+void mountCalib(const float raw[], const float invA[], const float bias[], int N, float res[]) {
+  for (int i = 0; i < N; i++) {
+    float tmp[3];
+    float tmp2[3];
+    //tmp=raw(:,i)-bias
+    tmp[0]=raw[i]-bias[0];
+    tmp[1]=raw[i+N]-bias[1];
+    tmp[2]=raw[i+N*2]-bias[2];
+    
+    //res(:,i)=invA*tmp
+    mv_mult(invA, tmp, tmp2);
+    res[i]=tmp2[0];
+    res[i+N]=tmp2[1];
+    res[i+2*N]=tmp2[2];
+  }
+}
+
+// Compute mount calibration parameters A and bias, return sigma
+// Calcule la matrice de transformation A et le biais bias pour corriger les mesures
+// measurements = mesures dans le referentiel du capteur 3xN
+// angles = [latitude ha_rot dec_rot] 3xN
+// theory = Valeur théorique du champ magnetique ou de l'acceleration 3xN (dans lerepere topo)
+// measurment = A * theory_tel + bias + residus
+// N = CALIB_SAMPLES
+float mountCalibCalc(const float raw[3][CALIB_SAMPLES], const float angles[3][CALIB_SAMPLES], const float theory[3], float A[3][3], float bias[3]) {
+  //CALIB_SAMPLES=N=size(raw,2);
+  float M[CALIB_SAMPLES * 3][12] = {0}; //M=zeros(3*N,12);
+  float F[3][CALIB_SAMPLES];
+  //h=raw(:);
+  for (int i = 0; i < CALIB_SAMPLES; i++) { //for i=1:N
+    //F(:,i)=tel2topo(angles(1,i),angles(2,i),angles(3,i))'*theory; %% vecteur théorie dans le repere tel
+    float tmp[3][3]; float tmp2[3][3]; float tmp3[3];
+    tel2topo(angles[0][i], angles[1][i], angles[2][i], tmp);
+    transpose(tmp, tmp2);
+    mv_mult(tmp2, theory, tmp3);
+    F[0][i] = tmp3[0]; F[1][i] = tmp3[1]; F[2][i] = tmp3[2];
+
+    //M(i*3-2,:)=[F(1,i) 0 0 F(2,i) 0 0 F(3,i) 0 0 1 0 0];
+    M[i * 3][0] = tmp3[0];
+    M[i * 3][3] = tmp3[1];
+    M[i * 3][6] = tmp3[2];
+    M[i * 3][9] = 1;
+    //M(i*3-1,:)=[0 F(1,i) 0 0 F(2,i) 0 0 F(3,i) 0 0 1 0];
+    M[i * 3 + 1][1] = tmp3[0];
+    M[i * 3 + 1][3 + 1] = tmp3[1];
+    M[i * 3 + 1][6 + 1] = tmp3[2];
+    M[i * 3 + 1][9 + 1] = 1;
+    //M(i*3-0,:)=[0 0 F(1,i) 0 0 F(2,i) 0 0 F(3,i) 0 0 1];
+    M[i * 3 + 2][2] = tmp3[0];
+    M[i * 3 + 2][3 + 2] = tmp3[1];
+    M[i * 3 + 2][6 + 2] = tmp3[2];
+    M[i * 3 + 2][9 + 2] = 1;
+  }//endfor
+
+  m_print("F = ", (const float*)F, 3,11);
+  m_print("M = ", (const float*)M, 33,12);
+  
+  //
+  //X=pinv(M)*h;
+  float x[12];
+  float h[3*CALIB_SAMPLES];
+  transpose((const float*)raw,h,3,CALIB_SAMPLES);
+  psolve(M, (const float*) h, x);
+
+  m_print("X = ", x, 12, 1);
+  
+  m_def(x[0], x[3], x[6], x[1], x[4], x[7], x[2], x[5], x[8], A); //A=[X(1) X(2) X(3);X(4) X(5) X(6);X(7) X(8) X(9)]';
+  v_def(x[9], x[10], x[11], bias); //bias=[X(10);X(11);X(12)];
+
+  float calibrated[3][CALIB_SAMPLES];
+  float invA[3][3]; float tmp[3][3];
+  m_copy((const float*)A, (float*)tmp);
+  inv((float*)tmp, (float*)invA, 3);
+  mountCalib((const float*)raw, (const float*)invA, bias, CALIB_SAMPLES, (float*)calibrated);
+  m_print("calibrated = ",(const float*)calibrated,3,CALIB_SAMPLES);
+  m_print("invA = ",(const float*)invA,3,3);
+  float sigma = 0;
+  for (int i = 0; i < CALIB_SAMPLES; i++) {
+    for(int j=0;j<3;j++){
+      sigma += (calibrated[j][i] - F[j][i])*(calibrated[j][i] - F[j][i]);
+    }
+  }
+  sigma = sqrt(sigma / 3. / CALIB_SAMPLES);
+  //error=mountCalib(raw,A,bias)-F;
+  //sigma=sqrt(sumsq(error(:))/3/N);
+
+  return sigma;
+}
+
+//Estimate the rotation of the mount
+void mountRot(const float mag[], const float acc[], float lat, const float mag_ref, float sigma_mag, float sigma_acc, float *ha_rot, float *dec_rot) {
+
+}
+
+void test() {
+  float angles[3][11] = {
+    {0.76027 , 0.76027  , 0.76027 ,  0.76027  , 0.76027  , 0.76027 ,  0.76027,   0.76027  , 0.76027 ,  0.76027 ,  0.76027},
+    {1.57080 , 1.57080  , 1.57080  , 1.57080 ,  0.00000 ,  0.00000 ,  0.00000 , -1.57080 , -1.57080 , -1.57080 , -1.57080},
+    {2.38133 , 0.81053  , 0.00000 , -0.76027 ,  0.00000 ,  1.57080  , -1.57080 , -2.38133 , -0.81053 ,  0.00000 ,  0.76027}
+  };
+  float g_theo[3] = {0, 0, 1};
+  float sample_acc[3][11] = {
+    {0.2961397, 0.0203861, -0.2723779, -0.3771973, 0.7195076, 0.9031326, 0.4299237, -0.3293138, 0.0602854, 0.2569494, 0.3288936},
+    {0.0097714, -1.0077747, -0.6309953, -0.0221939, -0.6665965, 0.0411808, -0.0020635, -0.0568032, -1.0063056, -0.7555479, 0.0357723},
+    { -0.9615755, -0.0221689, 0.7323623, 0.9225032, 0.1989725, -0.4180908, 0.8937209, 0.9391791, 0.0238558, -0.6171477, -0.9479230}
+  };
+  float A[3][3] = {0};
+  float bias[3] = {0};
+  float sigma = mountCalibCalc(sample_acc, angles, g_theo, A, bias);
+  m_print("A = ",(const float*)A);
+  v_print("bias = ",bias);
+  log_d("sigma = %f",sigma);
 }

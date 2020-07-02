@@ -30,8 +30,8 @@ endfunction
 %% calibre les mesures
 %% raw (3xN)
 %% calibrated (3xN)
-function calibrated=calibrate(raw,A,bias)
-  A_=inv(A);
+function calibrated=mountCalib(raw,A,bias)
+  A_=inv(A)
   N=size(raw,2);
 
   for i=1:N
@@ -44,29 +44,40 @@ endfunction
 %% angles = [latitude ha_rot dec_rot] 3xN
 %% theory = Valeur théorique du champ magnetique ou de l'acceleration 3xN (dans lerepere topo)
 %% measurment = A * theory_tel + bias + residus
-function [A,bias,sigma]=compute_calibration(measurements, angles, theory)
-  N=size(measurements,2);
+function [A,bias,sigma]=mountCalibCalc(raw, angles, theory)
+  N=size(raw,2);
   M=zeros(3*N,12);
-  h=measurements(:);
+  h=raw(:);
   for i=1:N
     F(:,i)=tel2topo(angles(1,i),angles(2,i),angles(3,i))'*theory; %% vecteur théorie dans le repere tel
     M(i*3-2,:)=[F(1,i) 0 0 F(2,i) 0 0 F(3,i) 0 0 1 0 0];
     M(i*3-1,:)=[0 F(1,i) 0 0 F(2,i) 0 0 F(3,i) 0 0 1 0];
     M(i*3-0,:)=[0 0 F(1,i) 0 0 F(2,i) 0 0 F(3,i) 0 0 1];
   endfor
-  
+  F
+  M
   X=pinv(M)*h;
+  X
+  B=M'*M
+  Binv=inv(B)
+  raw
+  b=h
+  tmp=M'*h
+  x=Binv*tmp
+  
   A=[X(1) X(2) X(3);X(4) X(5) X(6);X(7) X(8) X(9)]';
   bias=[X(10);X(11);X(12)];
-
-  error=calibrate(measurements,A,bias)-F;
+  
+  calibrated=mountCalib(raw,A,bias)
+  error=mountCalib(raw,A,bias)-F;
   sigma=sqrt(sumsq(error(:))/3/N);
   
 endfunction
 
+% Estimate the rotation of the mount
 % mag et acc  sont donnés dans le repere tel = [_|_ CP2instrum target]
 % mag_ref est donné dans le repere topo = wsz = [ouest sud zenith]
-function [ha_rot,dec_rot] = rot_estimate(mag,acc,lat,mag_ref,sigma_acc,sigma_mag)
+function [ha_rot,dec_rot] = mountRot(mag,acc,lat,mag_ref,sigma_mag,sigma_acc)
   a=mag_ref(2);
   b=mag_ref(1);
   c=mag_ref(3);
@@ -133,29 +144,31 @@ pi/2 pi/2 pi/2 pi/2 0 0 0 -pi/2 -pi/2 -pi/2 -pi/2;
 pi-lat pi/2-lat 0 -lat 0 pi/2 -pi/2 lat-pi lat-pi/2 0 lat];
 
 % first calibration using theorical angles
-[A_mag,bias_mag,sigma_mag]=compute_calibration(sample_mag, angles, m_theo);
-[A_acc,bias_acc,sigma_acc]=compute_calibration(sample_acc, angles, g_theo);
-sigma_mag
-sigma_acc
+[A_acc,bias_acc,sigma_acc]=mountCalibCalc(sample_acc, angles, g_theo)
 
-% Adjust angles
-sample_mag_cal = calibrate(sample_mag,A_mag,bias_mag);
-sample_acc_cal = calibrate(sample_acc,A_acc,bias_acc);
-[ha_rot,dec_rot]=rot_estimate(sample_mag_cal,sample_acc_cal,lat,m_theo,sigma_acc,sigma_mag);
-ha_max_error=max(abs(ha_rot-angles(2,:)))*360/2/pi
-dec_max_error=max(abs(dec_rot-angles(3,:)))*360/2/pi
-angles=[angles(1,:);ha_rot;dec_rot];
-
-% second calibration using corrected angles
-[A_mag,bias_mag,sigma_mag]=compute_calibration(sample_mag, angles, m_theo);
-[A_acc,bias_acc,sigma_acc]=compute_calibration(sample_acc, angles, g_theo);
-sigma_mag
-sigma_acc
-
-% Final check
-sample_mag_cal = calibrate(sample_mag,A_mag,bias_mag);
-sample_acc_cal = calibrate(sample_acc,A_acc,bias_acc);
-[ha_rot,dec_rot]=rot_estimate(sample_mag_cal,sample_acc_cal,lat,m_theo,sigma_acc,sigma_mag);
-ha_max_error=max(abs(ha_rot-angles(2,:)))*360/2/pi
-dec_max_error=max(abs(dec_rot-angles(3,:)))*360/2/pi
-angles=[angles(1,:);ha_rot;dec_rot];
+##[A_mag,bias_mag,sigma_mag]=mountCalibCalc(sample_mag, angles, m_theo);
+##
+##sigma_mag
+##sigma_acc
+##
+##% Adjust angles
+##sample_mag_cal = mountCalib(sample_mag,A_mag,bias_mag);
+##sample_acc_cal = mountCalib(sample_acc,A_acc,bias_acc);
+##[ha_rot,dec_rot]=mountRot(sample_mag_cal,sample_acc_cal,lat,m_theo,sigma_mag,sigma_acc);
+##ha_max_error=max(abs(ha_rot-angles(2,:)))*360/2/pi
+##dec_max_error=max(abs(dec_rot-angles(3,:)))*360/2/pi
+##angles=[angles(1,:);ha_rot;dec_rot];
+##
+##% second calibration using corrected angles
+##[A_mag,bias_mag,sigma_mag]=mountCalibCalc(sample_mag, angles, m_theo);
+##[A_acc,bias_acc,sigma_acc]=mountCalibCalc(sample_acc, angles, g_theo);
+##sigma_mag
+##sigma_acc
+##
+##% Final check
+##sample_mag_cal = mountCalib(sample_mag,A_mag,bias_mag);
+##sample_acc_cal = mountCalib(sample_acc,A_acc,bias_acc);
+##[ha_rot,dec_rot]=mountRot(sample_mag_cal,sample_acc_cal,lat,m_theo,sigma_mag,sigma_acc);
+##ha_max_error=max(abs(ha_rot-angles(2,:)))*360/2/pi
+##dec_max_error=max(abs(dec_rot-angles(3,:)))*360/2/pi
+##angles=[angles(1,:);ha_rot;dec_rot];
