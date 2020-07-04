@@ -40,36 +40,24 @@ void mm_mult(const float m[], const float n[], float res[], int sz1, int sz2, in
 void mv_mult(const float m[], const float v[], float res[], int sz1, int sz2);
 void sv_mult(float s, const float v[], float res[], int sz);
 void m_print(const char msg[], const float m[], int sz1, int sz2);
-void inv(float A[],float I[], int sz);
+void inv(float A[], float I[], int sz);
 void transpose(const float m[], float res[], int sz1, int sz2);
 
 //solve A.x=b (pseudosolution)
 // A[rows,cols] b[rows] x[cols]
 template <size_t rows, size_t cols> void psolve(const float (&A)[rows][cols], const float b[], float x[]) {
   // Compute pseudo-solution beta=(A' * A)^-1 * A' * b
-  
+
   float B[cols][cols];
   float Binv[cols][cols];
   float At[cols][rows]; //=A'
   float tmp[cols];
   float tmp2[cols][cols];
-  transpose((const float*)A,(float*)At,rows,cols);
+  transpose((const float*)A, (float*)At, rows, cols);
   mm_mult((const float*)At, (const float*)A, (float*)B, cols, rows, cols); // B = A' * A
-  m_copy((const float*)B,(float*)tmp2,cols*cols);inv((float*)tmp2, (float*)Binv, cols); // Binv = inv(B)
+  m_copy((const float*)B, (float*)tmp2, cols * cols); inv((float*)tmp2, (float*)Binv, cols); // Binv = inv(B)
   mv_mult((const float*)At, (const float*)b, tmp, cols, rows); // tmp = A' * b
   mv_mult((const float*)Binv, (const float*)tmp, x, cols, cols); // x = Binv * tmp
-
-
-
-  log_d("Psolve A.x=b");
-  m_print("A = ",(const float*)A,rows,cols);
-  m_print("At = ",(const float*)At,cols,rows);
-  m_print("B = A' * A = ",(const float*)B,cols,cols);
-  m_print("Binv = ",(const float*)Binv,cols,cols);
-  m_print("b = ",(const float*)b,rows,1);
-  m_print("tmp = ",(const float*)tmp,cols,1);
-  m_print("x = ",(const float*)x,cols,1);
-
 
   for (int i = 0; i < cols; i++) {
     x[i] = 0;

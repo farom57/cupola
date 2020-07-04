@@ -474,10 +474,10 @@ void v_def(float a0, float a1, float a2, float res[3]) {
   res[2] = a2;
 }
 
-void transpose(const float m[], float res[], int sz1, int sz2){
-  for(int i=0;i<sz1;i++){
-    for(int j=0;j<sz2;j++){
-      res[j*sz1+i]=m[i*sz2+j];
+void transpose(const float m[], float res[], int sz1, int sz2) {
+  for (int i = 0; i < sz1; i++) {
+    for (int j = 0; j < sz2; j++) {
+      res[j * sz1 + i] = m[i * sz2 + j];
     }
   }
 }

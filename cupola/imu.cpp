@@ -451,15 +451,15 @@ void mountCalib(const float raw[], const float invA[], const float bias[], int N
     float tmp[3];
     float tmp2[3];
     //tmp=raw(:,i)-bias
-    tmp[0]=raw[i]-bias[0];
-    tmp[1]=raw[i+N]-bias[1];
-    tmp[2]=raw[i+N*2]-bias[2];
-    
+    tmp[0] = raw[i] - bias[0];
+    tmp[1] = raw[i + N] - bias[1];
+    tmp[2] = raw[i + N * 2] - bias[2];
+
     //res(:,i)=invA*tmp
     mv_mult(invA, tmp, tmp2);
-    res[i]=tmp2[0];
-    res[i+N]=tmp2[1];
-    res[i+2*N]=tmp2[2];
+    res[i] = tmp2[0];
+    res[i + N] = tmp2[1];
+    res[i + 2 * N] = tmp2[2];
   }
 }
 
@@ -500,18 +500,13 @@ float mountCalibCalc(const float raw[3][CALIB_SAMPLES], const float angles[3][CA
     M[i * 3 + 2][9 + 2] = 1;
   }//endfor
 
-  m_print("F = ", (const float*)F, 3,11);
-  m_print("M = ", (const float*)M, 33,12);
-  
   //
   //X=pinv(M)*h;
   float x[12];
-  float h[3*CALIB_SAMPLES];
-  transpose((const float*)raw,h,3,CALIB_SAMPLES);
+  float h[3 * CALIB_SAMPLES];
+  transpose((const float*)raw, h, 3, CALIB_SAMPLES);
   psolve(M, (const float*) h, x);
 
-  m_print("X = ", x, 12, 1);
-  
   m_def(x[0], x[3], x[6], x[1], x[4], x[7], x[2], x[5], x[8], A); //A=[X(1) X(2) X(3);X(4) X(5) X(6);X(7) X(8) X(9)]';
   v_def(x[9], x[10], x[11], bias); //bias=[X(10);X(11);X(12)];
 
@@ -520,42 +515,157 @@ float mountCalibCalc(const float raw[3][CALIB_SAMPLES], const float angles[3][CA
   m_copy((const float*)A, (float*)tmp);
   inv((float*)tmp, (float*)invA, 3);
   mountCalib((const float*)raw, (const float*)invA, bias, CALIB_SAMPLES, (float*)calibrated);
-  m_print("calibrated = ",(const float*)calibrated,3,CALIB_SAMPLES);
-  m_print("invA = ",(const float*)invA,3,3);
+
   float sigma = 0;
   for (int i = 0; i < CALIB_SAMPLES; i++) {
-    for(int j=0;j<3;j++){
-      sigma += (calibrated[j][i] - F[j][i])*(calibrated[j][i] - F[j][i]);
+    for (int j = 0; j < 3; j++) {
+      sigma += (calibrated[j][i] - F[j][i]) * (calibrated[j][i] - F[j][i]);
     }
   }
   sigma = sqrt(sigma / 3. / CALIB_SAMPLES);
-  //error=mountCalib(raw,A,bias)-F;
-  //sigma=sqrt(sumsq(error(:))/3/N);
 
   return sigma;
 }
 
 //Estimate the rotation of the mount
-void mountRot(const float mag[], const float acc[], float lat, const float mag_ref, float sigma_mag, float sigma_acc, float *ha_rot, float *dec_rot) {
+// mag et acc  sont donnés dans le repere tel = [_|_ CP2instrum target]
+// mag_ref est donné dans le repere topo = wsz = [ouest sud zenith]
+void mountRot(const float mag[3], const float acc[3], float lat, const float mag_ref[3], float sigma_mag, float sigma_acc, float *ha_rot, float *dec_rot) {
+  float a = mag_ref[2];
+  float b = mag_ref[1];
+  float c = mag_ref[3];
+  float acc_n[3];
 
+  //normalize acc
+  normalize(acc, acc_n);
+
+  float D2 = sq(sigma_acc / cos(lat));
+  float T2 = sq(sigma_mag / a);
+
+  // Calcul de l'angle horaire
+  // en théorie cs = cos(ha_rot) et sn = sin(ha_rot)
+  // cs = acc(2,:)./cos(lat);
+  float cs = acc_n[1] / cos(lat);
+  //sn = 1./a.*(mag(1,:).*acc(3,:)-mag(3,:).*acc(1,:)-b.*sin(lat).*cs);
+  float sn = 1 / a * (mag[0] * acc_n[2] - mag[2] * acc[0] - b * sin(lat) * cs);
+
+  // en pratique les erreurs de mesures font qu'il y a une incertitude sigma=sqrt(D2) sur cs et sigma=sqrt(T2) sur sn
+  // la solution optimale minimise cos(ha_rot)-cs)²/D² + sin(ha_rot)-sn)²/T²
+  // resolution iterative:
+  *ha_rot = atan2(sn, cs);
+  for (int i = 0; i < 10; i++) {
+    //  delta=T2.*sin(ha_rot).*(cos(ha_rot)-cs)-D2.*(sin(ha_rot)-sn);
+    float delta = T2 * sin(*ha_rot) * (cos(*ha_rot) - cs) - D2 * (sin(*ha_rot) - sn);
+    //  ddelta_dha=(T2-D2).*(cos(ha_rot).^2-sin(ha_rot).^2)-T2.*cos(ha_rot).*cs-D2.*sin(ha_rot).*sn;
+    float ddelta_dha = (T2 - D2) * (sq(cos(*ha_rot)) - sq(sin(*ha_rot))) - T2 * cos(*ha_rot) * cs - D2 * sin(*ha_rot) * sn;
+    *ha_rot = *ha_rot - delta / ddelta_dha;
+  }
+
+  float theta = atan2(cos(lat) * sin(*ha_rot), sin(lat));
+  *dec_rot = theta - atan2(acc_n[0], acc_n[2]);
+}
+
+void mountRot(const float mag[], const float acc[], float lat, const float mag_ref[3], float sigma_mag, float sigma_acc, float ha_rot[], float dec_rot[], int N) {
+  for (int i = 0; i < N; i++) {
+    float mag_[3];
+    float acc_[3];
+    mag_[0] = mag[i]; mag_[1] = mag[N + i]; mag_[2] = mag[2 * N + i];
+    acc_[0] = acc[i]; acc_[1] = acc[N + i]; acc_[2] = acc[2 * N + i];
+
+    mountRot(mag_, acc_, lat, mag_ref, sigma_mag, sigma_acc, ha_rot + i, dec_rot + i);
+  }
 }
 
 void test() {
   float angles[3][11] = {
-    {0.76027 , 0.76027  , 0.76027 ,  0.76027  , 0.76027  , 0.76027 ,  0.76027,   0.76027  , 0.76027 ,  0.76027 ,  0.76027},
-    {1.57080 , 1.57080  , 1.57080  , 1.57080 ,  0.00000 ,  0.00000 ,  0.00000 , -1.57080 , -1.57080 , -1.57080 , -1.57080},
-    {2.38133 , 0.81053  , 0.00000 , -0.76027 ,  0.00000 ,  1.57080  , -1.57080 , -2.38133 , -0.81053 ,  0.00000 ,  0.76027}
+    {0.76027, 0.76027, 0.76027, 0.76027, 0.76027, 0.76027, 0.76027, 0.76027, 0.76027, 0.76027, 0.76027},
+    {1.57080, 1.57080, 1.57080, 1.57080, 0.00000, 0.00000, 0.00000, -1.57080, -1.57080, -1.57080, -1.57080},
+    {2.38133, 0.81053, 0.00000, -0.76027, 0.00000, 1.57080, -1.57080, -2.38133, -0.81053, 0.00000, 0.76027}
   };
-  float g_theo[3] = {0, 0, 1};
+
+  float g_theo[3] = {0, 0, 9.81};
+  float m_theo[3] = { -0.9983, -23.7225, -40.3228};
+  float lat = 0.76027;
+  normalize(g_theo, g_theo);
+  normalize(m_theo, m_theo);
+
   float sample_acc[3][11] = {
     {0.2961397, 0.0203861, -0.2723779, -0.3771973, 0.7195076, 0.9031326, 0.4299237, -0.3293138, 0.0602854, 0.2569494, 0.3288936},
     {0.0097714, -1.0077747, -0.6309953, -0.0221939, -0.6665965, 0.0411808, -0.0020635, -0.0568032, -1.0063056, -0.7555479, 0.0357723},
     { -0.9615755, -0.0221689, 0.7323623, 0.9225032, 0.1989725, -0.4180908, 0.8937209, 0.9391791, 0.0238558, -0.6171477, -0.9479230}
   };
-  float A[3][3] = {0};
-  float bias[3] = {0};
-  float sigma = mountCalibCalc(sample_acc, angles, g_theo, A, bias);
-  m_print("A = ",(const float*)A);
-  v_print("bias = ",bias);
-  log_d("sigma = %f",sigma);
+  float sample_mag[3][11] = {
+    {42.5566, 25.4898, 17.0382, 16.2612, 53.9518, 61.3569, 50.6354, 35.8514, 59.4819, 61.8541, 54.4595},
+    {39.6288, 52.1583, 28.3483, 8.3633, 34.0575, 23.9577, 9.7414, 40.4359, 54.4898, 40.2957, 13.6592},
+    {52.4937, -6.0766, -32.1879, -32.5365, -11.4623, 7.0396, -20.6011, -32.5611, 17.6675, 38.9497, 38.6845}
+  };
+  float sample_acc_cal[3][11];
+  float sample_mag_cal[3][11];
+
+  float A_acc[3][3] = {0};
+  float A_acc_inv[3][3] = {0};
+  float bias_acc[3] = {0};
+  float A_mag[3][3] = {0};
+  float A_mag_inv[3][3] = {0};
+  float bias_mag[3] = {0};
+  float ha_rot[CALIB_SAMPLES];
+  float dec_rot[CALIB_SAMPLES];
+  float tmp[9];
+  float sigma_mag;
+  float sigma_acc;
+  float ha_max_error;
+  float dec_max_error;
+
+  for (int iteration = 1; iteration <= 20; iteration++) {
+
+    // first calibration using therical angles
+    sigma_mag = mountCalibCalc(sample_mag, angles, m_theo, A_mag, bias_mag);
+    sigma_acc = mountCalibCalc(sample_acc, angles, g_theo, A_acc, bias_acc);
+
+    // inverse matrices
+    m_copy((const float*)A_mag, tmp);
+    inv(tmp, (float*)A_mag_inv, 3);
+    m_copy((const float*)A_acc, tmp);
+    inv(tmp, (float*)A_acc_inv, 3);
+
+    //  m_print("A_mag = ", (const float*)A_mag);
+    //  v_print("bias_mag = ", bias_mag);
+    //  log_d("sigma_mag = %f", sigma_mag);
+    //  m_print("A_acc = ", (const float*)A_acc);
+    //  v_print("bias_acc = ", bias_acc);
+    //  log_d("sigma_acc = %f", sigma_acc);
+
+    // Adjust angles
+    //sample_mag_cal = mountCalib(sample_mag,A_mag,bias_mag);
+    //sample_acc_cal = mountCalib(sample_acc,A_acc,bias_acc);
+    mountCalib((const float*)sample_mag, (const float*)A_mag_inv, bias_mag, CALIB_SAMPLES, (float*)sample_mag_cal);
+    mountCalib((const float*)sample_acc, (const float*)A_acc_inv, bias_acc, CALIB_SAMPLES, (float*)sample_acc_cal);
+    //[ha_rot,dec_rot]=mountRot(sample_mag_cal,sample_acc_cal,lat,m_theo,sigma_mag,sigma_acc);
+    mountRot((const float*)sample_mag_cal, (const float*)sample_acc_cal,  lat, m_theo, sigma_mag, sigma_acc, ha_rot, dec_rot, CALIB_SAMPLES);
+
+    //ha_max_error=max(abs(ha_rot-angles(2,:)))*360/2/pi
+    //dec_max_error=max(abs(dec_rot-angles(3,:)))*360/2/pi
+    //angles=[angles(1,:);ha_rot;dec_rot];
+    ha_max_error = 0;
+    dec_max_error = 0;
+    for (int i = 0; i < CALIB_SAMPLES; i++) {
+      ha_max_error = max(ha_max_error , abs(ha_rot[i] - angles[1][i]));
+      dec_max_error = max(dec_max_error , abs(dec_rot[i] - angles[2][i]));
+      angles[1][i] = ha_rot[i];
+      angles[2][i] = dec_rot[i];
+    }
+    ha_max_error *= 360. / 2. / PI;
+    dec_max_error *= 360. / 2. / PI;
+
+    log_d("Iteration %i", iteration);
+
+    m_print("ha_rot = ", ha_rot, 1, 11);
+    m_print("dec_rot = ", dec_rot, 1, 11);
+
+    log_d("ha_max_error = %f", ha_max_error);
+    log_d("dec_max_error = %f", dec_max_error);
+    log_d("");
+  }
+
+
 }
