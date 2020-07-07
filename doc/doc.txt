@@ -16,6 +16,7 @@ Dip:
     +___ et appui boutton: Log magnetometre et accelerometre
     ++__ et appui boutton: Calibration boussole
     +++_ et appui boutton: Test
+    ++++ et appui boutton: Test2
     _+XX: Monture
     __XX: Coupole
         

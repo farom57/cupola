@@ -4,10 +4,8 @@
 #include "settings.h"
 #include "vector.h"
 #include "cupola.h"
-
+#include "rf.h"
 #include "ble.h"
-
-
 
 
 
@@ -19,7 +17,6 @@ enum operating_modes operating_mode;
 
 bool old_local_btn_state = false;
 bool old_remote_btn_state = false;
-
 
 
 
@@ -100,6 +97,9 @@ void setup() {
     initBLEPeripheral();
     state = CONNECTION;
   }
+
+  start_rf();
+
   log_i("Initialisation done");
 
 }
@@ -169,13 +169,13 @@ void loop_debug() {
     current_calib_sample = 0;
   }
 
-  if(state==LOG_SENSOR && btn()){
+  if (state == LOG_SENSOR && btn()) {
     stopIMU();
     state = connectedPeripheral() ? STANDBY : CONNECTION;
     writeState(state);
     current_calib_sample = 0;
   }
-  
+
   if (switch_1() && !switch_2() && !switch_3() && !switch_4() && btn()) {
     state = LOG_SENSOR;
     initIMUMagAcc();
@@ -189,10 +189,17 @@ void loop_debug() {
   if (switch_1() && switch_2() && switch_3() && !switch_4() && btn()) {
     test();
   }
+  if (switch_1() && switch_2() && switch_3() && switch_4()) {
+    if(btn()) {
+      rf_command=LEFT;
+    }else{
+      rf_command=NONE;
+    }
+  }
 
   ledRYG(false, false, false);
   ledRGB(false, false, false);
-  
+
 
   // state operations
   if (state == CONNECTION) {
@@ -211,17 +218,17 @@ void loop_debug() {
     updateMag();
     updateAcc();
     float mag_calib[3];
-    compassCalib(mag_raw,mag_calib);
-    float heading=atan2(mag_calib[1],mag_calib[0])*360./2./PI;
-    
-    log_("%fdeg\t%f\t%f\t%f\t%f",heading, mag_calib[0],mag_calib[1],mag_calib[2],norm(mag_calib)); 
+    compassCalib(mag_raw, mag_calib);
+    float heading = atan2(mag_calib[1], mag_calib[0]) * 360. / 2. / PI;
+
+    log_("%fdeg\t%f\t%f\t%f\t%f", heading, mag_calib[0], mag_calib[1], mag_calib[2], norm(mag_calib));
     delay(100);
   }
   if (state == COMPASS_CALIB) {
     ledRYG(false, true, true);
     ledRGB(true, true, true);
     sampleCalib();
-    log_("%7.3f\t%7.3f\t%7.3f\t%7.3f\t%7.3f\t%7.3f\t",mag_raw[0],mag_raw[1],mag_raw[2],acc_filt[0],acc_filt[1],acc_filt[2]);
+    log_("%7.3f\t%7.3f\t%7.3f\t%7.3f\t%7.3f\t%7.3f\t", mag_raw[0], mag_raw[1], mag_raw[2], acc_filt[0], acc_filt[1], acc_filt[2]);
     current_calib_sample++;
     delay(CALIB_PERIOD);
   }
@@ -230,7 +237,7 @@ void loop_debug() {
     ledRYG(false, true, true);
     ledRGB(true, true, true);
     sampleCalib();
-    log_d("%f\t%f\t%f\t%f\t%f\t%f\t",mag_raw[0],mag_raw[1],mag_raw[2],acc_filt[0],acc_filt[1],acc_filt[2]);
+    log_d("%f\t%f\t%f\t%f\t%f\t%f\t", mag_raw[0], mag_raw[1], mag_raw[2], acc_filt[0], acc_filt[1], acc_filt[2]);
     delay(CALIB_PERIOD);
   }
 

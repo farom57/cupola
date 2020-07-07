@@ -194,3 +194,29 @@ float readTemp() {
   NRF_TEMP->TASKS_STOP = 0x1;
   return (float)raw * 0.25;
 }
+
+void send_low() {
+  // 0
+  digitalWrite(PIN_TX_DATA, HIGH);
+  delayMicroseconds(479);
+  digitalWrite(PIN_TX_DATA, LOW);
+  delayMicroseconds(1315);
+}
+void send_high() {
+  // 1
+  digitalWrite(PIN_TX_DATA, HIGH);
+  delayMicroseconds(1315);
+  digitalWrite(PIN_TX_DATA, LOW);
+  delayMicroseconds(479);
+}
+
+void pause(){
+  digitalWrite(PIN_TX_DATA, LOW);
+  delayMicroseconds(1794);
+  delayMicroseconds(1794);
+  delayMicroseconds(1794);
+  delayMicroseconds(1794);
+  delayMicroseconds(1794);
+  delayMicroseconds(1794);
+  delayMicroseconds(1794);
+}

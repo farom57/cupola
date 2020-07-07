@@ -25,6 +25,10 @@ bool switch_3_chg();
 bool switch_4_chg();
 bool btn_chg();
 
+void send_low();
+void send_high();
+void pause();
+
 float readTemp();
 
 #endif
