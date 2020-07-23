@@ -13,8 +13,11 @@
 #define K_SMOOTH 0.1
 #define MAG_CHANGE_THRESHOLD 2.0
 
-#define CALIB_SAMPLES 11
-#define CALIB_PERIOD 100
+#define CALIB_SAMPLES 9
+#define CALIB_DELAY 1000
+
+#define DEG(a)  a*360./2./PI
+#define RAD(a)  a*2.*PI/360.
 
 extern bool acc_error_flag;
 extern bool mag_error_flag;
@@ -49,8 +52,10 @@ int writeRegister(uint8_t slaveAddress, uint8_t address, uint8_t value);
 void sampleCalib();   // Acquire and save calibration sample
 void compassCalibCalc();  // Compute compass calibration parameters
 void compassCalib(float in[], float res[]); // correct res
+float heading(float in[]); // return the heading in rad
 
 void mountCalib(const float raw[], const float invA[], const float bias[], int N, float res[]); // calibrate mount measurements
+float mountCalibCalc();// Compute mount calibration
 float mountCalibCalc(const float raw[3][CALIB_SAMPLES], const float angles[3][CALIB_SAMPLES], const float theory[3], float A[3][3], float bias[3]);// Compute mount calibration parameters A and bias, return sigma
 void mountRot(const float mag[3], const float acc[3], float lat, const float mag_ref[3], float sigma_mag, float sigma_acc, float *ha_rot, float *dec_rot);//Estimate the rotation of the mount
 void mountRot(const float mag[], const float acc[], float lat, const float mag_ref[3], float sigma_mag, float sigma_acc, float ha_rot[], float dec_rot[], int N); //Estimate the rotation of the mount

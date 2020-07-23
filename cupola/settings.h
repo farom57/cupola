@@ -23,30 +23,46 @@
 
 #define CONNECTION_KEEPALIVE_TIMEOUT 10000L
 #define CONNECTION_KEEPALIVE_TIMEOUT2 20000L
+#define LOOP_PERIOD 100
 
 #define DEBOUNCE_DELAY 50
 
-#define ST_NB 15
+#define ST_NB 11
 #define ST_KEY_LEN 32
 #define ST_VAL_LEN 32
 
+#define DEFAULT_LAT 43.56
+#define DEFAULT_MAG_X -0.9983 // https://www.ngdc.noaa.gov/geomag/calculators/magcalc.shtml#igrfwmm
+#define DEFAULT_MAG_Y -23.7225
+#define DEFAULT_MAG_Z -40.3228
+
 extern char st_keys[ST_NB][ST_KEY_LEN];
 extern int st_startup;
-extern float st_compass_bias_x;
-extern float st_compass_bias_y;
-extern float st_compass_amp_x;
-extern float st_compass_amp_y;
-extern float st_compass_amp_z;
+extern float st_compass_bias[3];
+extern float st_compass_amp[3];
 extern float st_compass_rot[3][3];
+extern float st_compass_heading_bias;
+extern float st_lat;
+extern float st_ref_mag[3];
+extern float st_A_mag_inv[3][3];
+extern float st_A_acc_inv[3][3];
+extern float st_bias_mag[3];
+extern float st_bias_acc[3];
 
 void resetSt();                                 // reset setting storage
 void loadSt();                                  // load setings from the flash
 void defaultSt();                               // set default settings
+void saveAllSt();                               // Save all settings
 void saveSt(const char* key, const char* val, int len); // save setting
 void saveFloatSt(const char* key, float val);   // save setting
+void saveFloat3x3St(const char* key, float val[3][3]);   // save setting
+void saveFloat3St(const char* key, float val[3]);   // save setting
+void saveIntSt(const char* key, int val);       // save setting
 int readSt(const char* key, char* val);         // read the setting and store the result in val char array. The number of char read is returned
 bool readIntSt(const char* key, int* val);      // read the setting and store the result in val. In case of error, val is not modified and false is returned
 bool readFloatSt(const char* key, float* val);  // read the setting and store the result in val. In case of error, val is not modified and false is returned
+void readFloat3x3St(const char* key, float* val[3][3]);// read setting
+void readFloat3St(const char* key, float* val[3]);   // read setting
 
 void saveCompassCalib();
 //void stReadHandler(BLEDevice central, BLECharacteristic characteristic);

@@ -37,7 +37,6 @@ float acc_filt[3];
 bool acc_error_flag = false;
 bool mag_error_flag = false;
 
-
 float calib_mag[3][CALIB_SAMPLES];
 float calib_acc[3][CALIB_SAMPLES];
 int current_calib_sample = 0;
@@ -308,7 +307,6 @@ void sampleCalib() {
   if (errorCount >= 5) {
     acc_error_flag = !accAvailable();
     acc_error_flag = !magAvailable();
-    current_calib_sample--;
     log_e("IMU error %s:%d", __FILE__, __LINE__);
     return;
   }
@@ -321,6 +319,7 @@ void sampleCalib() {
   calib_acc[0][current_calib_sample] = acc_filt[0];
   calib_acc[1][current_calib_sample] = acc_filt[1];
   calib_acc[2][current_calib_sample] = acc_filt[2];
+  current_calib_sample++;
 }
 
 // Compute compass calibration parameters
@@ -423,12 +422,18 @@ void compassCalibCalc() {
   log_d("Horizontal field:\t%f\t%f", amp_X, amp_Y);
 
   // check_validity: horizontal field should be around 23.7 for Cannes, France
-  if (amp_X > 10 && amp_X < 70 && amp_Y > 10 && amp_Y < 70 && amp_X / amp_Y < 1.1 && amp_X / amp_Y > 0.9) {
-    st_compass_bias_x = bias_X;
-    st_compass_bias_y = bias_Y;
-    st_compass_amp_x = amp_X;
-    st_compass_amp_y = amp_Y;
-    st_compass_amp_z = amp_Z;
+  if (amp_X > 10 && amp_X < 70 && amp_Y > 10 && amp_Y < 70 && amp_X / amp_Y < 1.3 && amp_X / amp_Y > 0.7) {
+    st_compass_bias[0] = bias_X;
+    st_compass_bias[1]= bias_Y;
+    st_compass_amp[0] = amp_X;
+    st_compass_amp[1] = amp_Y;
+    st_compass_amp[2] = amp_Z;
+
+    st_compass_heading_bias = 0;
+    float initial_sample[3] = {calib_mag[0][0], calib_mag[1][0], calib_mag[2][0]};
+    st_compass_heading_bias = -heading(initial_sample);
+    log_d("Heading bias:\t%f", DEG(st_compass_heading_bias));
+
     m_copy((float*)XYZt, (float*)st_compass_rot);
     saveCompassCalib();
   } else {
@@ -436,11 +441,23 @@ void compassCalibCalc() {
   }
 }
 
+// return the heading in rad
+float heading(float in[]) {
+  float calibrated[3];
+  compassCalib(in, calibrated);
+  float res = atan2(calibrated[1], calibrated[0]) + st_compass_heading_bias;
+  if (res > PI)
+    res = res - 2.*PI;
+  if (res < -PI)
+    res = res + 2.*PI;
+  return atan2(calibrated[1], calibrated[0]);
+}
+
 void compassCalib(float in[], float res[]) {
   mv_mult((float*)st_compass_rot, in, res);
-  res[0] = (res[0] - st_compass_bias_x) / st_compass_amp_x;
-  res[1] = (res[1] - st_compass_bias_y) / st_compass_amp_y;
-  res[2] = res[2] / st_compass_amp_z;
+  res[0] = (res[0] - st_compass_bias[0]) / st_compass_amp[0];
+  res[1] = (res[1] - st_compass_bias[1]) / st_compass_amp[1];
+  res[2] = res[2] / st_compass_amp[2];
 }
 
 // calibrate mount measurements
@@ -576,29 +593,18 @@ void mountRot(const float mag[], const float acc[], float lat, const float mag_r
   }
 }
 
-void test() {
-  float angles[3][11] = {
-    {0.76027, 0.76027, 0.76027, 0.76027, 0.76027, 0.76027, 0.76027, 0.76027, 0.76027, 0.76027, 0.76027},
-    {1.57080, 1.57080, 1.57080, 1.57080, 0.00000, 0.00000, 0.00000, -1.57080, -1.57080, -1.57080, -1.57080},
-    {2.38133, 0.81053, 0.00000, -0.76027, 0.00000, 1.57080, -1.57080, -2.38133, -0.81053, 0.00000, 0.76027}
+
+
+// Compute mount calibration
+float mountCalibCalc() {
+  float angles[3][CALIB_SAMPLES] = {
+    {RAD(st_lat), RAD(st_lat), RAD(st_lat), RAD(st_lat), RAD(st_lat), RAD(st_lat), RAD(st_lat), RAD(st_lat), RAD(st_lat)},
+    {0.5 * PI, 0.5 * PI, 0.5 * PI, 0.00000, 0.00000, 0.00000, -0.5 * PI, -0.5 * PI, -0.5 * PI},
+    {PI - RAD(st_lat), 0.5 * PI - RAD(st_lat), -RAD(st_lat), 0.00000, 1.57080, -1.57080, RAD(st_lat) - PI, RAD(st_lat) - 0.5 * PI, RAD(st_lat)}
   };
 
-  float g_theo[3] = {0, 0, 9.81};
-  float m_theo[3] = { -0.9983, -23.7225, -40.3228};
-  float lat = 0.76027;
-  normalize(g_theo, g_theo);
-  normalize(m_theo, m_theo);
+  float g_theo[3] = {0, 0, 1};
 
-  float sample_acc[3][11] = {
-    {0.2961397, 0.0203861, -0.2723779, -0.3771973, 0.7195076, 0.9031326, 0.4299237, -0.3293138, 0.0602854, 0.2569494, 0.3288936},
-    {0.0097714, -1.0077747, -0.6309953, -0.0221939, -0.6665965, 0.0411808, -0.0020635, -0.0568032, -1.0063056, -0.7555479, 0.0357723},
-    { -0.9615755, -0.0221689, 0.7323623, 0.9225032, 0.1989725, -0.4180908, 0.8937209, 0.9391791, 0.0238558, -0.6171477, -0.9479230}
-  };
-  float sample_mag[3][11] = {
-    {42.5566, 25.4898, 17.0382, 16.2612, 53.9518, 61.3569, 50.6354, 35.8514, 59.4819, 61.8541, 54.4595},
-    {39.6288, 52.1583, 28.3483, 8.3633, 34.0575, 23.9577, 9.7414, 40.4359, 54.4898, 40.2957, 13.6592},
-    {52.4937, -6.0766, -32.1879, -32.5365, -11.4623, 7.0396, -20.6011, -32.5611, 17.6675, 38.9497, 38.6845}
-  };
   float sample_acc_cal[3][11];
   float sample_mag_cal[3][11];
 
@@ -619,8 +625,8 @@ void test() {
   for (int iteration = 1; iteration <= 20; iteration++) {
 
     // first calibration using therical angles
-    sigma_mag = mountCalibCalc(sample_mag, angles, m_theo, A_mag, bias_mag);
-    sigma_acc = mountCalibCalc(sample_acc, angles, g_theo, A_acc, bias_acc);
+    sigma_mag = mountCalibCalc(calib_mag, angles, st_ref_mag, A_mag, bias_mag);
+    sigma_acc = mountCalibCalc(calib_acc, angles, g_theo, A_acc, bias_acc);
 
     // inverse matrices
     m_copy((const float*)A_mag, tmp);
@@ -638,10 +644,10 @@ void test() {
     // Adjust angles
     //sample_mag_cal = mountCalib(sample_mag,A_mag,bias_mag);
     //sample_acc_cal = mountCalib(sample_acc,A_acc,bias_acc);
-    mountCalib((const float*)sample_mag, (const float*)A_mag_inv, bias_mag, CALIB_SAMPLES, (float*)sample_mag_cal);
-    mountCalib((const float*)sample_acc, (const float*)A_acc_inv, bias_acc, CALIB_SAMPLES, (float*)sample_acc_cal);
+    mountCalib((const float*)calib_mag, (const float*)A_mag_inv, bias_mag, CALIB_SAMPLES, (float*)sample_mag_cal);
+    mountCalib((const float*)calib_acc, (const float*)A_acc_inv, bias_acc, CALIB_SAMPLES, (float*)sample_acc_cal);
     //[ha_rot,dec_rot]=mountRot(sample_mag_cal,sample_acc_cal,lat,m_theo,sigma_mag,sigma_acc);
-    mountRot((const float*)sample_mag_cal, (const float*)sample_acc_cal,  lat, m_theo, sigma_mag, sigma_acc, ha_rot, dec_rot, CALIB_SAMPLES);
+    mountRot((const float*)sample_mag_cal, (const float*)sample_acc_cal,  st_lat, st_ref_mag, sigma_mag, sigma_acc, ha_rot, dec_rot, CALIB_SAMPLES);
 
     //ha_max_error=max(abs(ha_rot-angles(2,:)))*360/2/pi
     //dec_max_error=max(abs(dec_rot-angles(3,:)))*360/2/pi
@@ -654,8 +660,8 @@ void test() {
       angles[1][i] = ha_rot[i];
       angles[2][i] = dec_rot[i];
     }
-    ha_max_error *= 360. / 2. / PI;
-    dec_max_error *= 360. / 2. / PI;
+    ha_max_error = DEG(ha_max_error);
+    dec_max_error = DEG(dec_max_error);
 
     log_d("Iteration %i", iteration);
 
@@ -666,6 +672,4 @@ void test() {
     log_d("dec_max_error = %f", dec_max_error);
     log_d("");
   }
-
-
 }

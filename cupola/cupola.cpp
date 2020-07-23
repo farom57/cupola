@@ -118,6 +118,8 @@ void loop() {
 }
 
 void loop_debug() {
+  ledRYG(false, false, false);
+  ledRGB(false, false, false);
   BLE.poll();
   checkStWritten();
 
@@ -151,54 +153,73 @@ void loop_debug() {
     log_i("State change received, state change to STANDBY");
   }
 
-  //start mag calibration test
-  if (switch_1() && switch_2() && !switch_3() && !switch_4() && btn()) {
-    state = COMPASS_CALIB;
-    initIMUMagAcc();
-    writeState(state);
-    log_i("Compass calibration mode");
-    log_("Mag_x  \tMag_y  \tMag_z  \tAcc_x  \tAcc_y  \tAcc_z  \t");
-    current_calib_sample = 0;
+  // Cupola or mount calibration: DIP +X__ and push
+  // ++__ for mount
+  // +___ for cupola
+  if (switch_1() && !switch_3() && !switch_4() && btn()) {
+    // au premier appui initialiser
+    // pour chaque appui: attendre 1s et capturer
+    // au dernier appui, arreter et appeler la fonction pour la coupole ou la monture
+    if (current_calib_sample == 0) {
+      state = CALIB;
+      initIMUMagAcc();
+      writeState(state);
+      log_i("Calibration mode");
+      log_("Step\tMag_x  \tMag_y  \tMag_z  \tAcc_x  \tAcc_y  \tAcc_z  \t");
+    }
+    ledRGB(true, true, true);
+    delay(CALIB_DELAY);
+    ledRGB(false, false, false);
+    sampleCalib(); // current_calib_sample is incremented
+    log_d("%i\t%f\t%f\t%f\t%f\t%f\t%f\t", current_calib_sample, mag_raw[0], mag_raw[1], mag_raw[2], acc_filt[0], acc_filt[1], acc_filt[2]);
+
+    if (current_calib_sample == CALIB_SAMPLES) {
+      stopIMU();
+      current_calib_sample = 0;
+      state = connectedPeripheral() ? STANDBY : CONNECTION;
+      writeState(state);
+      if (switch_2()) {
+        mountCalibCalc();
+      } else {
+        compassCalibCalc();
+      }
+    }
   }
 
-  if (current_calib_sample >= CALIB_SAMPLES) {
-    stopIMU();
-    state = connectedPeripheral() ? STANDBY : CONNECTION;
-    writeState(state);
-    compassCalibCalc();
-    current_calib_sample = 0;
-  }
-
-  if (state == LOG_SENSOR && btn()) {
-    stopIMU();
-    state = connectedPeripheral() ? STANDBY : CONNECTION;
-    writeState(state);
-    current_calib_sample = 0;
-  }
-
-  if (switch_1() && !switch_2() && !switch_3() && !switch_4() && btn()) {
+  // Sensor log: +++_
+  if (switch_1() && switch_2() && switch_3() && !switch_4() && btn() && state != LOG_SENSOR) {
     state = LOG_SENSOR;
     initIMUMagAcc();
     writeState(state);
     log_i("Sensor log mode");
-    log_("Mag_x  \tMag_y  \tMag_z  \tAcc_x  \tAcc_y  \tAcc_z  \t");
+    log_("Mag_x  \tMag_y  \tMag_z  \tAcc_x  \tAcc_y  \tAcc_z  \tHeading\t");
     current_calib_sample = 0;
+  } else if (state == LOG_SENSOR && btn()) {
+    stopIMU();
+    state = connectedPeripheral() ? STANDBY : CONNECTION;
+    writeState(state);
+    current_calib_sample = 0;
+    ledRGB(false, false, false);
+    delay(CALIB_DELAY);
   }
 
-  //test
-  if (switch_1() && switch_2() && switch_3() && !switch_4() && btn()) {
-    test();
-  }
-  if (switch_1() && switch_2() && switch_3() && switch_4()) {
-    if(btn()) {
-      rf_command=LEFT;
-    }else{
-      rf_command=NONE;
+  // Cupola manual rotation: DIP +XX+ and push
+  // ++_+ and push for right
+  // +__+ and push for left
+  // ++++ and push for up
+  // +_++ and push for down
+  if (switch_1()  && switch_4()) {
+    if (btn()) {
+      if (switch_2() && !switch_3())rf_command = RIGHT;
+      if (!switch_2() && !switch_3())rf_command = LEFT;
+      if (switch_2() && switch_3())rf_command = UP;
+      if (!switch_2() && switch_3())rf_command = DOWN;
+    } else {
+      rf_command = NONE;
     }
   }
 
-  ledRYG(false, false, false);
-  ledRGB(false, false, false);
+
 
 
   // state operations
@@ -219,26 +240,23 @@ void loop_debug() {
     updateAcc();
     float mag_calib[3];
     compassCalib(mag_raw, mag_calib);
-    float heading = atan2(mag_calib[1], mag_calib[0]) * 360. / 2. / PI;
+    float heading = DEG(atan2(mag_calib[1], mag_calib[0]));
 
     log_("%fdeg\t%f\t%f\t%f\t%f", heading, mag_calib[0], mag_calib[1], mag_calib[2], norm(mag_calib));
     delay(100);
   }
-  if (state == COMPASS_CALIB) {
+  if (state == CALIB) {
     ledRYG(false, true, true);
-    ledRGB(true, true, true);
-    sampleCalib();
-    log_("%7.3f\t%7.3f\t%7.3f\t%7.3f\t%7.3f\t%7.3f\t", mag_raw[0], mag_raw[1], mag_raw[2], acc_filt[0], acc_filt[1], acc_filt[2]);
-    current_calib_sample++;
-    delay(CALIB_PERIOD);
+    ledRGB(false, false, true);
   }
 
   if (state == LOG_SENSOR) {
     ledRYG(false, true, true);
-    ledRGB(true, true, true);
+    ledRGB(false, false, true);
     sampleCalib();
-    log_d("%f\t%f\t%f\t%f\t%f\t%f\t", mag_raw[0], mag_raw[1], mag_raw[2], acc_filt[0], acc_filt[1], acc_filt[2]);
-    delay(CALIB_PERIOD);
+    current_calib_sample = 0;
+    log_d("%f\t%f\t%f\t%f\t%f\t%f\t%f\t", mag_raw[0], mag_raw[1], mag_raw[2], acc_filt[0], acc_filt[1], acc_filt[2], DEG(heading(mag_raw)));
+    delay(CALIB_DELAY);
   }
 
 
@@ -248,13 +266,16 @@ void loop_debug() {
     ledRGB(acc_error_flag, mag_error_flag, false);
     log_e("IMU error, acc_error_flag=%u mag_error_flag=%u", acc_error_flag, mag_error_flag);
   }
+  delay(LOOP_PERIOD);
 }
 
 
 
 void loop_mount() {
+  ledRYG(false, false, false);
+  ledRGB(false, false, false);
   BLE.poll();
-  checkStWritten();
+
   // state transitions
   // Connection, state change directly to ON in debug mode
   if (state == CONNECTION && connectedCentral()) {
@@ -284,31 +305,30 @@ void loop_mount() {
     log_i("Button pressed, state change to STANDBY");
   }
 
-  // Error
-  if (acc_error_flag || mag_error_flag) {
-    ledRGB(acc_error_flag, mag_error_flag, false);
-    log_e("IMU error, acc_error_flag=%u mag_error_flag=%u", acc_error_flag, mag_error_flag);
-  }
-
   // state operations
   if (state == CONNECTION) {
     ledRYG(true, false, true);
     connectBLECentral();
-    delay(100);
   }
   if (state == STANDBY) {
     ledRYG(false, false, true);
-    delay(100);
   }
   if (state == ON) {
     ledRYG(false, true, true);
-    delay(100);
   }
+
+  // Error
+  if (acc_error_flag || mag_error_flag) {
+    //in debug mode, error are displayed with the led but ignored
+    ledRGB(acc_error_flag, mag_error_flag, false);
+    log_e("IMU error, acc_error_flag=%u mag_error_flag=%u", acc_error_flag, mag_error_flag);
+  }
+  delay(LOOP_PERIOD);
 }
 
 void loop_cupola() {
   BLE.poll();
-
+  checkStWritten();
   // state transitions
   // Connection, state change directly to ON in debug mode
   if (state == CONNECTION && connectedPeripheral()) {
@@ -338,30 +358,31 @@ void loop_cupola() {
     writeState(state);
     log_i("State change received, state change to STANDBY");
   }
-  // Error
-  if (acc_error_flag || mag_error_flag) {
-    ledRGB(acc_error_flag, mag_error_flag, false);
-    log_e("IMU error, acc_error_flag=%u mag_error_flag=%u", acc_error_flag, mag_error_flag);
-  }
+  ledRYG(false, false, false);
+  ledRGB(false, false, false);
 
   // state operations
   if (state == CONNECTION) {
     ledRYG(true, false, true);
     connectBLEPeripheral();
-    delay(100);
   }
   if (state == STANDBY) {
     ledRYG(false, false, true);
     updateSwitches();
-    delay(100);
   }
   if (state == ON) {
     ledRYG(false, true, true);
     updateSwitches();
     updateMag();
-    delay(100);
   }
 
+  // Error
+  if (acc_error_flag || mag_error_flag) {
+    //in debug mode, error are displayed with the led but ignored
+    ledRGB(acc_error_flag, mag_error_flag, false);
+    log_e("IMU error, acc_error_flag=%u mag_error_flag=%u", acc_error_flag, mag_error_flag);
+  }
+  delay(LOOP_PERIOD);
 }
 
 
