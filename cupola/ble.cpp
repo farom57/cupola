@@ -54,6 +54,7 @@ BLECharacteristic *stChar[ST_NB];
 BLEDescriptor *stDescr[ST_NB];
 
 
+
 //   ---------------------------------------
 //   ---   Peripheral public functions   ---
 //   ---------------------------------------
@@ -185,7 +186,7 @@ void initBLEPeripheral() {
     sprintf(uuid, UUID_PREFIX "%02x", sufix);
     readSt(settings[i].key, val);
     stChar[i] = new BLECharacteristic(uuid, BLERead | BLEWrite, ST_VAL_LEN);
-    stChar[i]->writeValue(val, strlen(val)+1);
+    stChar[i]->writeValue(val, strlen(val) + 1);
     stDescr[i] = new BLEDescriptor ("2901", settings[i].key);
     stService->addCharacteristic(*stChar[i]);
     stChar[i]->addDescriptor(*stDescr[i]);
@@ -333,7 +334,7 @@ bool connectedPeripheral() {
 void checkStWritten() {
   for (int i = 0; i < ST_NB; i++) {
     if (stChar[i]->written()) {
-      saveSt(settings[i].key, (const char*)stChar[i]->value(),stChar[i]->valueLength());
+      saveSt(settings[i].key, (const char*)stChar[i]->value(), stChar[i]->valueLength());
     }
   }
 }

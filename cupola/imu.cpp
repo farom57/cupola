@@ -677,6 +677,8 @@ float mountCalibCalc() {
   m_copy((const float*)A_mag_inv, (float*)st_A_mag_inv, 3);
   m_copy((const float*)A_acc_inv, (float*)st_A_acc_inv, 3);
   v_copy(bias_mag, st_bias_mag, 3);
-  v_copy(bias_acc, st_bias_mag, 3);
+  v_copy(bias_acc, st_bias_acc, 3);
+  st_sigma_acc = sigma_acc;
+  st_sigma_mag = sigma_mag;
   saveAllSt();
 }
