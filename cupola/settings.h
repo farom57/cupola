@@ -36,7 +36,14 @@
 #define DEFAULT_MAG_Y -23.7225
 #define DEFAULT_MAG_Z -40.3228
 
-extern char st_keys[ST_NB][ST_KEY_LEN];
+enum setting_type { INT, FLOAT, FLOAT3, FLOAT9};
+
+struct setting {
+  char key[ST_KEY_LEN];
+  void* ptr;
+  enum setting_type type;
+};
+
 extern int st_startup;
 extern float st_compass_bias[3];
 extern float st_compass_amp[3];
@@ -49,22 +56,23 @@ extern float st_A_acc_inv[3][3];
 extern float st_bias_mag[3];
 extern float st_bias_acc[3];
 
+extern struct setting settings[ST_NB];
+
 void resetSt();                                 // reset setting storage
 void loadSt();                                  // load setings from the flash
 void defaultSt();                               // set default settings
 void saveAllSt();                               // Save all settings
 void saveSt(const char* key, const char* val, int len); // save setting
 void saveFloatSt(const char* key, float val);   // save setting
-void saveFloat3x3St(const char* key, float val[3][3]);   // save setting
+void saveFloat9St(const char* key, float val[9]);   // save setting
 void saveFloat3St(const char* key, float val[3]);   // save setting
 void saveIntSt(const char* key, int val);       // save setting
 int readSt(const char* key, char* val);         // read the setting and store the result in val char array. The number of char read is returned
 bool readIntSt(const char* key, int* val);      // read the setting and store the result in val. In case of error, val is not modified and false is returned
 bool readFloatSt(const char* key, float* val);  // read the setting and store the result in val. In case of error, val is not modified and false is returned
-void readFloat3x3St(const char* key, float* val[3][3]);// read setting
+void readFloat9St(const char* key, float* val[9]);    // read setting
 void readFloat3St(const char* key, float* val[3]);   // read setting
 
-void saveCompassCalib();
 //void stReadHandler(BLEDevice central, BLECharacteristic characteristic);
 //void stWriteHandler(BLEDevice central, BLECharacteristic characteristic);
 

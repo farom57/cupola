@@ -2,19 +2,9 @@
 #include "utility.h"
 #include "KVStore.h"
 #include "kvstore_global_api.h"
-enum setting_type { INT, FLOAT, FLOAT3, FLOAT33, END };
 
-struct setting{
-  char key[ST_KEY_LEN];
-  void* ptr;
-  enum setting_type type;
-};
 
-char st_keys[ST_NB][ST_KEY_LEN] = {
-  "/kv/startup",
-  "/kv/compass_bias",  "/kv/compass_amp",  "/kv/compass_rot",  "/kv/compass_heading_bias",
-  "/kv/lat",  "/kv/ref_mag", "/kv/A_mag_inv", "/kv/A_acc_inv", "/kv/bias_mag", "/kv/bias_acc"
-};
+
 int st_startup;
 float st_compass_bias[3];
 float st_compass_amp[3];
@@ -27,19 +17,18 @@ float st_A_acc_inv[3][3];
 float st_bias_mag[3];
 float st_bias_acc[3];
 
-struct setting settings[]{
+struct setting settings[ST_NB] {
   {"/kv/st_startup", &st_startup, INT},
   {"/kv/st_compass_bias", &st_compass_bias, FLOAT3},
   {"/kv/st_compass_amp", &st_compass_amp, FLOAT3},
-  {"/kv/st_compass_rot", &st_compass_rot, FLOAT33},
+  {"/kv/st_compass_rot", &st_compass_rot, FLOAT9},
   {"/kv/st_compass_heading_bias", &st_compass_heading_bias, FLOAT},
   {"/kv/st_lat", &st_lat, FLOAT},
   {"/kv/st_ref_mag", & st_ref_mag, FLOAT3},
-  {"/kv/st_A_mag_inv", &st_A_mag_inv, FLOAT33},
-  {"/kv/st_A_acc_inv", &st_A_acc_inv, FLOAT33},
+  {"/kv/st_A_mag_inv", &st_A_mag_inv, FLOAT9},
+  {"/kv/st_A_acc_inv", &st_A_acc_inv, FLOAT9},
   {"/kv/st_bias_mag", &st_bias_mag, FLOAT3},
-  {"/kv/st_bias_acc", &st_bias_acc, FLOAT3},
-  {"", 0, END}
+  {"/kv/st_bias_acc", &st_bias_acc, FLOAT3}
 };
 
 // reset setting storage
@@ -55,55 +44,47 @@ void resetSt() {
 // load setings from the flash
 void loadSt() {
   defaultSt();
-  readIntSt(st_keys[0], &st_startup);
-//  readFloatSt(st_keys[1], &st_compass_bias_x);
-//  readFloatSt(st_keys[2], &st_compass_bias_y);
-//  readFloatSt(st_keys[3], &st_compass_amp_x);
-//  readFloatSt(st_keys[4], &st_compass_amp_y);
-//  readFloatSt(st_keys[5], &st_compass_amp_z);
-  readFloatSt(st_keys[6], &st_compass_rot[0][0]);
-  readFloatSt(st_keys[7], &st_compass_rot[0][1]);
-  readFloatSt(st_keys[8], &st_compass_rot[0][2]);
-  readFloatSt(st_keys[9], &st_compass_rot[1][0]);
-  readFloatSt(st_keys[10], &st_compass_rot[1][1]);
-  readFloatSt(st_keys[11], &st_compass_rot[1][2]);
-  readFloatSt(st_keys[12], &st_compass_rot[2][0]);
-  readFloatSt(st_keys[13], &st_compass_rot[2][1]);
-  readFloatSt(st_keys[14], &st_compass_rot[2][2]);
-  readFloatSt(st_keys[15], &st_compass_heading_bias);
-  readFloatSt(st_keys[16], &st_lat);
-  readFloatSt(st_keys[17], &st_ref_mag[0]);
-  readFloatSt(st_keys[18], &st_ref_mag[1]);
-  readFloatSt(st_keys[19], &st_ref_mag[2]);
+  for (int i = 0; i < ST_NB; i++) {
+    switch (settings[i].type) {
+      case INT:
+        readIntSt(settings[i].key, (int*)(settings[i].ptr));
+        break;
+      case FLOAT:
+        readFloatSt(settings[i].key, (float*)(settings[i].ptr));
+        break;
+      case FLOAT3:
+        readFloat3St(settings[i].key, (float**)(settings[i].ptr));
+        break;
+      case FLOAT9:
+        readFloat9St(settings[i].key, (float**)(settings[i].ptr));
+        break;
+    }
+  }
 
   st_startup++;
-  saveIntSt(st_keys[0], st_startup);
+  saveIntSt(settings[0].key, st_startup);
   //log_d("%s=%i", st_keys[0], kv_startup);
 
 }
 
 
 void saveAllSt() {
-  saveIntSt(st_keys[0], st_startup);
-//  saveFloatSt(st_keys[1], st_compass_bias_x);
-//  saveFloatSt(st_keys[2], st_compass_bias_y);
-//  saveFloatSt(st_keys[3], st_compass_amp_x);
-//  saveFloatSt(st_keys[4], st_compass_amp_y);
-//  saveFloatSt(st_keys[5], st_compass_amp_z);
-  saveFloatSt(st_keys[6], st_compass_rot[0][0]);
-  saveFloatSt(st_keys[7], st_compass_rot[0][1]);
-  saveFloatSt(st_keys[8], st_compass_rot[0][2]);
-  saveFloatSt(st_keys[9], st_compass_rot[1][0]);
-  saveFloatSt(st_keys[10], st_compass_rot[1][1]);
-  saveFloatSt(st_keys[11], st_compass_rot[1][2]);
-  saveFloatSt(st_keys[12], st_compass_rot[2][0]);
-  saveFloatSt(st_keys[13], st_compass_rot[2][1]);
-  saveFloatSt(st_keys[14], st_compass_rot[2][2]);
-  saveFloatSt(st_keys[15], st_compass_heading_bias);
-  saveFloatSt(st_keys[16], st_lat);
-  saveFloatSt(st_keys[17], st_ref_mag[0]);
-  saveFloatSt(st_keys[18], st_ref_mag[1]);
-  saveFloatSt(st_keys[19], st_ref_mag[2]);
+  for (int i = 0; i < ST_NB; i++) {
+    switch (settings[i].type) {
+      case INT:
+        saveIntSt(settings[i].key, *(int*)(settings[i].ptr));
+        break;
+      case FLOAT:
+        saveFloatSt(settings[i].key, *(float*)(settings[i].ptr));
+        break;
+      case FLOAT3:
+        saveFloat3St(settings[i].key, *(float**)(settings[i].ptr));
+        break;
+      case FLOAT9:
+        saveFloat9St(settings[i].key, *(float**)(settings[i].ptr));
+        break;
+    }
+  }
 }
 
 // set default settings
@@ -213,25 +194,25 @@ bool readFloatSt(const char* key, float* val) {
   }
 }
 
-void readFloat3x3St(const char* key, float* val[3][3]){
-  char buf[200]={0};
+void readFloat9St(const char* key, float* val[9]) {
+  char buf[200] = {0};
   size_t actual_size;
   int res = kv_get(key, buf, 200, &actual_size);
   if (res != 0) {
     log_e("Error while reading %s = %s. Actual_size: %d Error code: %d", key, buf, actual_size, res);
     return;
   }
-  sscanf(buf, "%.9g %.9g %.9g\n%.9g %.9g %.9g \n%.9g %.9g %.9g", val[0][0],val[0][1],val[0][2],val[1][0],val[1][1],val[1][2],val[2][0],val[2][1],val[2][2]);
+  sscanf(buf, "%.9g %.9g %.9g\n%.9g %.9g %.9g \n%.9g %.9g %.9g", val[0], val[1], val[2], val[3], val[4], val[5], val[6], val[7], val[8]);
 }
-void readFloat3St(const char* key, float* val[3]){
-    char buf[100]={0};
+void readFloat3St(const char* key, float* val[3]) {
+  char buf[100] = {0};
   size_t actual_size;
   int res = kv_get(key, buf, 200, &actual_size);
   if (res != 0) {
     log_e("Error while reading %s = %s. Actual_size: %d Error code: %d", key, buf, actual_size, res);
     return;
   }
-  sscanf(buf, "%.9g %.9g %.9g", val[0],val[1],val[2]);
+  sscanf(buf, "%.9g %.9g %.9g", val[0], val[1], val[2]);
 }
 
 // save setting
@@ -242,14 +223,14 @@ void saveFloatSt(const char* key, float val) {
 }
 
 // save setting
-void saveFloat3x3St(const char* key, float val[3][3]){
-  char buf[200]={0};
-  sprintf(buf, "%.9g %.9g %.9g\n%.9g %.9g %.9g \n%.9g %.9g %.9g", val[0][0],val[0][1],val[0][2],val[1][0],val[1][1],val[1][2],val[2][0],val[2][1],val[2][2]);
+void saveFloat9St(const char* key, float val[9]) {
+  char buf[200] = {0};
+  sprintf(buf, "%.9g %.9g %.9g\n%.9g %.9g %.9g \n%.9g %.9g %.9g", val[0], val[1], val[2], val[3], val[4], val[5], val[6], val[7], val[8]);
   saveSt(key, buf, strlen(buf));
 }
-void saveFloat3St(const char* key, float val[3]){
-  char buf[100]={0};
-  sprintf(buf, "%.9g %.9g %.9g", val[0],val[1],val[2]);
+void saveFloat3St(const char* key, float val[3]) {
+  char buf[100] = {0};
+  sprintf(buf, "%.9g %.9g %.9g", val[0], val[1], val[2]);
   saveSt(key, buf, strlen(buf));
 }
 
@@ -257,25 +238,5 @@ void saveFloat3St(const char* key, float val[3]){
 void saveIntSt(const char* key, int val) {
   char buf[ST_VAL_LEN];
   sprintf(buf, "%d", st_startup);
-  saveSt(st_keys[0], buf, strlen(buf));
-}
-
-
-void saveCompassCalib() {
-//  saveFloatSt(st_keys[1], st_compass_bias_x);
-//  saveFloatSt(st_keys[2], st_compass_bias_y);
-//  saveFloatSt(st_keys[3], st_compass_amp_x);
-//  saveFloatSt(st_keys[4], st_compass_amp_y);
-//  saveFloatSt(st_keys[5], st_compass_amp_z);
-  saveFloatSt(st_keys[6], st_compass_rot[0][0]);
-  saveFloatSt(st_keys[7], st_compass_rot[0][1]);
-  saveFloatSt(st_keys[8], st_compass_rot[0][2]);
-  saveFloatSt(st_keys[9], st_compass_rot[1][0]);
-  saveFloatSt(st_keys[10], st_compass_rot[1][1]);
-  saveFloatSt(st_keys[11], st_compass_rot[1][2]);
-  saveFloatSt(st_keys[12], st_compass_rot[2][0]);
-  saveFloatSt(st_keys[13], st_compass_rot[2][1]);
-  saveFloatSt(st_keys[14], st_compass_rot[2][2]);
-  saveFloatSt(st_keys[15], st_compass_heading_bias);
-  loadSt();
+  saveSt(key, buf, strlen(buf));
 }

@@ -424,7 +424,7 @@ void compassCalibCalc() {
   // check_validity: horizontal field should be around 23.7 for Cannes, France
   if (amp_X > 10 && amp_X < 70 && amp_Y > 10 && amp_Y < 70 && amp_X / amp_Y < 1.3 && amp_X / amp_Y > 0.7) {
     st_compass_bias[0] = bias_X;
-    st_compass_bias[1]= bias_Y;
+    st_compass_bias[1] = bias_Y;
     st_compass_amp[0] = amp_X;
     st_compass_amp[1] = amp_Y;
     st_compass_amp[2] = amp_Z;
@@ -435,7 +435,7 @@ void compassCalibCalc() {
     log_d("Heading bias:\t%f", DEG(st_compass_heading_bias));
 
     m_copy((float*)XYZt, (float*)st_compass_rot);
-    saveCompassCalib();
+    saveAllSt();
   } else {
     log_e("Invalid compass calibration parameters %s:%d", __FILE__, __LINE__);
   }
@@ -671,5 +671,12 @@ float mountCalibCalc() {
     log_d("ha_max_error = %f", ha_max_error);
     log_d("dec_max_error = %f", dec_max_error);
     log_d("");
+
   }
+
+  m_copy((const float*)A_mag_inv, (float*)st_A_mag_inv, 3);
+  m_copy((const float*)A_acc_inv, (float*)st_A_acc_inv, 3);
+  v_copy(bias_mag, st_bias_mag, 3);
+  v_copy(bias_acc, st_bias_mag, 3);
+  saveAllSt();
 }
