@@ -548,9 +548,9 @@ float mountCalibCalc(const float raw[3][CALIB_SAMPLES], const float angles[3][CA
 // mag et acc  sont donnés dans le repere tel = [_|_ CP2instrum target]
 // mag_ref est donné dans le repere topo = wsz = [ouest sud zenith]
 void mountRot(const float mag[3], const float acc[3], float lat, const float mag_ref[3], float sigma_mag, float sigma_acc, float *ha_rot, float *dec_rot) {
-  float a = mag_ref[2];
-  float b = mag_ref[1];
-  float c = mag_ref[3];
+  float a = mag_ref[1];
+  float b = mag_ref[0];
+  float c = mag_ref[2];
   float acc_n[3];
 
   //normalize acc
@@ -564,7 +564,8 @@ void mountRot(const float mag[3], const float acc[3], float lat, const float mag
   // cs = acc(2,:)./cos(lat);
   float cs = acc_n[1] / cos(lat);
   //sn = 1./a.*(mag(1,:).*acc(3,:)-mag(3,:).*acc(1,:)-b.*sin(lat).*cs);
-  float sn = 1 / a * (mag[0] * acc_n[2] - mag[2] * acc[0] - b * sin(lat) * cs);
+  float sn = 1 / a * (mag[0] * acc_n[2] - mag[2] * acc_n[0] - b * sin(lat) * cs);
+
 
   // en pratique les erreurs de mesures font qu'il y a une incertitude sigma=sqrt(D2) sur cs et sigma=sqrt(T2) sur sn
   // la solution optimale minimise cos(ha_rot)-cs)²/D² + sin(ha_rot)-sn)²/T²
@@ -603,7 +604,9 @@ float mountCalibCalc() {
     {PI - RAD(st_lat), 0.5 * PI - RAD(st_lat), -RAD(st_lat), 0.00000, 1.57080, -1.57080, RAD(st_lat) - PI, RAD(st_lat) - 0.5 * PI, RAD(st_lat)}
   };
 
+
   float g_theo[3] = {0, 0, 1};
+  float m_theo[3];;
 
   float sample_acc_cal[3][11];
   float sample_mag_cal[3][11];
@@ -621,11 +624,14 @@ float mountCalibCalc() {
   float sigma_acc;
   float ha_max_error;
   float dec_max_error;
+  normalize(st_ref_mag, m_theo);
 
   for (int iteration = 1; iteration <= 20; iteration++) {
 
+    log_d("Iteration %i", iteration);
+
     // first calibration using therical angles
-    sigma_mag = mountCalibCalc(calib_mag, angles, st_ref_mag, A_mag, bias_mag);
+    sigma_mag = mountCalibCalc(calib_mag, angles, m_theo, A_mag, bias_mag);
     sigma_acc = mountCalibCalc(calib_acc, angles, g_theo, A_acc, bias_acc);
 
     // inverse matrices
@@ -634,12 +640,12 @@ float mountCalibCalc() {
     m_copy((const float*)A_acc, tmp);
     inv(tmp, (float*)A_acc_inv, 3);
 
-    //  m_print("A_mag = ", (const float*)A_mag);
-    //  v_print("bias_mag = ", bias_mag);
-    //  log_d("sigma_mag = %f", sigma_mag);
-    //  m_print("A_acc = ", (const float*)A_acc);
-    //  v_print("bias_acc = ", bias_acc);
-    //  log_d("sigma_acc = %f", sigma_acc);
+    m_print("A_mag = ", (const float*)A_mag);
+    v_print("bias_mag = ", bias_mag);
+    log_d("sigma_mag = %f", sigma_mag);
+    m_print("A_acc = ", (const float*)A_acc);
+    v_print("bias_acc = ", bias_acc);
+    log_d("sigma_acc = %f", sigma_acc);
 
     // Adjust angles
     //sample_mag_cal = mountCalib(sample_mag,A_mag,bias_mag);
@@ -647,7 +653,7 @@ float mountCalibCalc() {
     mountCalib((const float*)calib_mag, (const float*)A_mag_inv, bias_mag, CALIB_SAMPLES, (float*)sample_mag_cal);
     mountCalib((const float*)calib_acc, (const float*)A_acc_inv, bias_acc, CALIB_SAMPLES, (float*)sample_acc_cal);
     //[ha_rot,dec_rot]=mountRot(sample_mag_cal,sample_acc_cal,lat,m_theo,sigma_mag,sigma_acc);
-    mountRot((const float*)sample_mag_cal, (const float*)sample_acc_cal,  st_lat, st_ref_mag, sigma_mag, sigma_acc, ha_rot, dec_rot, CALIB_SAMPLES);
+    mountRot((const float*)sample_mag_cal, (const float*)sample_acc_cal,  RAD(st_lat), m_theo, sigma_mag, sigma_acc, ha_rot, dec_rot, CALIB_SAMPLES);
 
     //ha_max_error=max(abs(ha_rot-angles(2,:)))*360/2/pi
     //dec_max_error=max(abs(dec_rot-angles(3,:)))*360/2/pi
@@ -663,10 +669,10 @@ float mountCalibCalc() {
     ha_max_error = DEG(ha_max_error);
     dec_max_error = DEG(dec_max_error);
 
-    log_d("Iteration %i", iteration);
 
-    m_print("ha_rot = ", ha_rot, 1, 11);
-    m_print("dec_rot = ", dec_rot, 1, 11);
+
+    m_print("ha_rot = ", ha_rot, 1, CALIB_SAMPLES);
+    m_print("dec_rot = ", dec_rot, 1, CALIB_SAMPLES);
 
     log_d("ha_max_error = %f", ha_max_error);
     log_d("dec_max_error = %f", dec_max_error);

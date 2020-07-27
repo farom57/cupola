@@ -105,8 +105,8 @@ m_theo=[-0.9983;-23.7225;-40.3228]; % https://www.ngdc.noaa.gov/geomag/calculato
 
 lat=deg2rad(lat);
 g_theo=[0;0;9.81];
-%m_theo=m_theo./norm(m_theo);
-%g_theo=g_theo./norm(g_theo);
+m_theo=m_theo./norm(m_theo);
+g_theo=g_theo./norm(g_theo);
 
 
 % A remplacer par acquisition durant 1s a chaque appuisur le bouton
