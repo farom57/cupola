@@ -195,7 +195,6 @@ void loop_debug() {
     initIMUMagAcc();
     writeState(state);
     log_i("Sensor log mode");
-    log_("Mag_x  \tMag_y  \tMag_z  \tAcc_x  \tAcc_y  \tAcc_z  \tHeading\t\tMag_x_cal  \tMag_y_cal  \tMag_z_cal  \tAcc_x_cal  \tAcc_y_cal  \tAcc_z_cal Ha_rot Dec_rot");
     current_calib_sample = 0;
   } else if (state == LOG_SENSOR && btn()) {
     stopIMU();
@@ -256,16 +255,31 @@ void loop_debug() {
   if (state == LOG_SENSOR) {
     ledRYG(false, true, true);
     ledRGB(false, false, true);
-    sampleCalib();
-    current_calib_sample = 0;
-    float mag_calibrated[3];
+
+    readMagConv(mag_raw);
+    readAccConv(acc_filt);
+
+    log_("raw sample (acc;mag)");
+    m_print("", acc_filt, 3, 1);
+    m_print("", mag_raw, 3, 1);
+
+    float mag_calibrated[3], acc_calibrated[3];
     mountCalib(mag_raw, (const float *)st_A_mag_inv, st_bias_mag, 1, mag_calibrated);
-    float acc_calibrated[3];
     mountCalib(acc_filt, (const float *)st_A_acc_inv, st_bias_acc, 1, acc_calibrated);
-    float ha_rot,dec_rot;
-    mountRot(mag_calibrated, acc_calibrated, st_lat, st_ref_mag, st_sigma_mag, st_sigma_acc, &ha_rot, &dec_rot);
-    log_d("%f\t%f\t%f\t%f\t%f\t%f\t%f\t\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t%f\t", mag_raw[0], mag_raw[1], mag_raw[2], acc_filt[0], acc_filt[1], acc_filt[2], DEG(heading(mag_raw)),
-          mag_calibrated[0], mag_calibrated[1], mag_calibrated[2], acc_calibrated[0], acc_calibrated[1], acc_calibrated[2], DEG(ha_rot),DEG(dec_rot));
+
+    log_("cal sample (acc;mag)");
+    m_print("", acc_calibrated, 3, 1);
+    m_print("", mag_calibrated, 3, 1);
+
+    float ha_rot, dec_rot;
+    float m_theo[3];
+    normalize(st_ref_mag, m_theo);
+    mountRot(mag_calibrated, acc_calibrated, RAD(st_lat), m_theo, st_sigma_mag, st_sigma_acc, &ha_rot, &dec_rot);
+
+    log_("retrieved angles:");
+    log_("ha_rot = %f", DEG(ha_rot));
+    log_("dec_rot = %f", DEG(dec_rot));
+    //log_("%f\t%f\t%f\t\t%f\t%f\t%f\t\t%f\t%f", mag_calibrated[0], mag_calibrated[1], mag_calibrated[2], acc_calibrated[0], acc_calibrated[1], acc_calibrated[2], DEG(ha_rot), DEG(dec_rot));
     delay(CALIB_DELAY);
   }
 

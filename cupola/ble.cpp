@@ -1,9 +1,11 @@
 #include "settings.h"
 #include "ble.h"
 #include "io.h"
+#include "imu.h"
 #include "cupola.h"
 #include "utility.h"
 #include <ArduinoBLE.h>
+#include "nrf_temp.h"
 
 
 //   ---   BLE global variables   ---
@@ -40,8 +42,8 @@ BLEDescriptor* stateDescr;
 // Mag & Acc
 BLECharacteristic *magRawStringChar, *magFiltStringChar, *accStringChar;
 BLEDescriptor *magRawStringDescr, *magFiltStringDescr, *accStringDescr;
-BLEFloatCharacteristic *magRawXChar, *magRawYChar, *magRawZChar, *magFiltXChar, *magFiltYChar, *magFiltZChar, *accXChar, *accYChar, *accZChar;
-BLEDescriptor *magRawXDescr, *magRawYDescr, *magRawZDescr, *magFiltXDescr, *magFiltYDescr, *magFiltZDescr, *accXDescr, *accYDescr, *accZDescr;
+BLEFloatCharacteristic *magRawXChar, *magRawYChar, *magRawZChar, *magFiltXChar, *magFiltYChar, *magFiltZChar, *accXChar, *accYChar, *accZChar, *headRawChar, *headFiltChar;
+BLEDescriptor *magRawXDescr, *magRawYDescr, *magRawZDescr, *magFiltXDescr, *magFiltYDescr, *magFiltZDescr, *accXDescr, *accYDescr, *accZDescr, *headRawDescr, *headFiltDescr;
 BLEFloatCharacteristic *magRawChar[3], *magFiltChar[3], *accChar[3];
 BLEDescriptor *magRawDescr[3], *magFiltDescr[3], *accDescr[3];
 
@@ -52,6 +54,9 @@ BLEDescriptor* aliveDescr;
 // Settings
 BLECharacteristic *stChar[ST_NB];
 BLEDescriptor *stDescr[ST_NB];
+
+// Commands
+BLEBoolCharacteristic* *moveUpChar,*moveDownChar,*moveLeftChar,*moveRightChar,*trackChar;
 
 
 
@@ -133,12 +138,26 @@ void initBLEPeripheral() {
   magFiltDescr[0] = magFiltXDescr;
   magFiltDescr[1] = magFiltYDescr;
   magFiltDescr[2] = magFiltZDescr;
+
+  headRawChar = new BLEFloatCharacteristic(UUID_PREFIX "39", BLERead | BLENotify);
+  headRawDescr = new BLEDescriptor ("2901", "Heading raw");
+  headFiltChar = new BLEFloatCharacteristic(UUID_PREFIX "3A", BLERead | BLENotify);
+  headFiltDescr = new BLEDescriptor ("2901", "Heading filt");
+
+
   magService->addCharacteristic(*magRawStringChar);
   magRawStringChar->addDescriptor(*magRawStringDescr);
   magRawStringChar->writeValue(" xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
   magService->addCharacteristic(*magFiltStringChar);
   magFiltStringChar->addDescriptor(*magFiltStringDescr);
   magFiltStringChar->writeValue(" xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
+  magService->addCharacteristic(*headRawChar);
+  headRawChar->addDescriptor(*headRawDescr);
+  headRawChar->writeValue(0.);
+  magService->addCharacteristic(*headFiltChar);
+  headFiltChar->addDescriptor(*headFiltDescr);
+  headFiltChar->writeValue(0.);
+
   for (int i = 0; i <= 2; i++) {
     magService->addCharacteristic(*magRawChar[i]);
     magRawChar[i]->addDescriptor(*magRawDescr[i]);
@@ -171,6 +190,7 @@ void initBLEPeripheral() {
     accChar[i]->addDescriptor(*accDescr[i]);
     accChar[i]->writeValue(0.);
   }
+
 
   aliveService = new BLEService(UUID_PREFIX "50");
   aliveChar = new BLELongCharacteristic(UUID_PREFIX "51", BLERead | BLEWrite);
@@ -210,6 +230,7 @@ void initBLEPeripheral() {
   magRawXChar->setEventHandler(BLERead, magReadHandler);
   magRawYChar->setEventHandler(BLERead, magReadHandler);
   magRawZChar->setEventHandler(BLERead, magReadHandler);
+  headRawChar->setEventHandler(BLERead, magReadHandler);
 
   BLE.advertise();
 
@@ -238,7 +259,7 @@ void disconnectBLE() {
   log_w("Disconnected");
   remote.disconnect();
   log_w("Rebooting");
-  wait(0.1);
+  delay(0.1);
   system_reset();
 }
 
@@ -251,7 +272,8 @@ void writeMagRaw(float mag_raw[]) {
   for (int i = 0; i < 3; i++) {
     magRawChar[i]->writeValue(mag_raw[i]);
   }
-  //log_d("Mag_raw: %s", buf);
+  headRawChar->writeValue(heading(mag_raw)*360/2./PI);
+
 }
 
 
@@ -263,7 +285,9 @@ void writeMagFilt(float mag_filt[]) {
   for (int i = 0; i < 3; i++) {
     magFiltChar[i]->writeValue(mag_filt[i]);
   }
-  //log_d("Mag_filt: %s", buf);
+
+  headFiltChar->writeValue(heading(mag_smooth)*360/2./PI);
+
 }
 
 
