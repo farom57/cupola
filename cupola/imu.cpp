@@ -1,7 +1,7 @@
 #include "imu.h"
 
 #include <Wire.h>
-#include "Arduino.h"
+#include <Arduino.h>
 #include "utility.h"
 #include "settings.h"
 #include "cupola.h"

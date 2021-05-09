@@ -1,4 +1,4 @@
-#include "Arduino.h"
+#include <Arduino.h>
 #include "settings.h"
 #include "io.h"
 #include "nrf_temp.h"

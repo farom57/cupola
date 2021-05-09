@@ -6,6 +6,7 @@
 #include "cupola.h"
 #include "rf.h"
 #include "ble.h"
+#include <Arduino.h>
 
 
 
@@ -123,6 +124,7 @@ void loop() {
 void loop_debug() {
   ledRYG(false, false, false);
   ledRGB(false, false, false);
+  
   BLE.poll();
   checkStWritten();
 
@@ -155,6 +157,7 @@ void loop_debug() {
     writeState(state);
     log_i("State change received, state change to STANDBY");
   }
+
 
   // Cupola or mount calibration: DIP +X__ and push
   // ++__ for mount
@@ -212,12 +215,19 @@ void loop_debug() {
   // +_++ and push for down
   if (switch_1()  && switch_4()) {
     if (btn()) {
-      if (switch_2() && !switch_3())rf_command = RIGHT;
-      if (!switch_2() && !switch_3())rf_command = LEFT;
-      if (switch_2() && switch_3())rf_command = UP;
-      if (!switch_2() && switch_3())rf_command = DOWN;
+      if (switch_2() && !switch_3())   set_rf_cmd(RIGHT);
+      if (!switch_2() && !switch_3())  set_rf_cmd(LEFT);
+      if (switch_2() && switch_3())    set_rf_cmd(UP);
+      if (!switch_2() && switch_3())   set_rf_cmd(DOWN);
     } else {
-      rf_command = NONE;
+      set_rf_cmd(NONE);
+    }
+    ledRGB(rf_command&0b100,rf_command&0b010,rf_command&0b001);
+  }else{
+    enum rf_commands cmd = readRfCmd();
+    if(cmd!=rf_command){
+      log_i("rf command changed from ble:%i",(byte)cmd);
+      set_rf_cmd(cmd);
     }
   }
 
@@ -242,9 +252,22 @@ void loop_debug() {
     updateAcc();
     float mag_calib[3];
     compassCalib(mag_raw, mag_calib);
-    float heading = DEG(atan2(mag_calib[1], mag_calib[0]));
-
-    log_("%fdeg\t%f\t%f\t%f\t%f", heading, mag_calib[0], mag_calib[1], mag_calib[2], norm(mag_calib));
+    float head = DEG(heading(mag_smooth));
+    float target = readTarget();
+    float diff = target-head;
+    if(diff>180.) diff-=360.;
+    if(diff<-180.) diff+=360.;
+    //log_("%fdeg\t%f\t%f\t%f\t%f", head, mag_calib[0], mag_calib[1], mag_calib[2], norm(mag_calib));
+    log_("%f %f %f",head,target,diff);
+    if(diff>3){
+      set_rf_cmd(RIGHT);
+      ledRGB(rf_command&0b100,rf_command&0b010,rf_command&0b001);
+    }
+    if(diff<-3){
+      set_rf_cmd(LEFT);
+      ledRGB(rf_command&0b100,rf_command&0b010,rf_command&0b001);
+    }
+    
     delay(100);
   }
   if (state == CALIB) {
@@ -494,9 +517,14 @@ void magReadHandler(BLEDevice central, BLECharacteristic characteristic) {
     writeMagFilt(mag_filt);
   }
 
-
-
 }
+
+// // called if manual rf command changed
+// void rfCmdHandler(BLEDevice central, BLECharacteristic characteristic){
+//   const enum rf_commands cmd = (enum rf_commands)(*characteristic.value());
+//   log_i("received rf command by BLE: %i",(byte)cmd);
+//   set_rf_cmd(cmd);
+// }
 
 
 // Mount

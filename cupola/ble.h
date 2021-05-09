@@ -3,6 +3,7 @@
 
 #include <ArduinoBLE.h>
 #include "cupola.h"
+#include "rf.h"
 
 extern BLEDevice remote;
 
@@ -18,7 +19,10 @@ void writeMagRaw(float mag_raw[]);    // update Mag Raw characteristic
 void writeMagFilt(float mag_filt[]);  // update Mag Filt characteristic
 void writeAcc(float acc[]);           // update Acc characteristic
 void writeState(enum states val);     // update State characteristic
+void writeRfCmd(enum rf_commands cmd);// update rf commande characteristic
 enum states readState();              // read State characteristic
+enum rf_commands readRfCmd();         // read Rf command characteristic
+float readTarget();                   // read heading target
 void updateSwitches();                // update switches characteristics
 bool connectedPeripheral();           // return true if the connection is alive, ignore timeout if switch1 is ON
 void checkStWritten();                // check if a setting char has been written and save the setting
@@ -30,7 +34,7 @@ void magReadHandler(BLEDevice central, BLECharacteristic characteristic);       
 void blePeripheralConnectHandler(BLEDevice central);                              // called when a central device tries to connect
 void blePeripheralDisconnectHandler(BLEDevice central);                           // called when a central close the connection
 void connectionAliveHandler(BLEDevice central, BLECharacteristic characteristic); // called when the keepalive characteristic is changed
-
+void rfCmdHandler(BLEDevice central, BLECharacteristic characteristic);           // implemented in cupola.cpp, called if manual rf command changed
 
 //   ------------------------------------
 //   ---   Central public functions   ---

@@ -20,8 +20,11 @@
 enum rf_commands {NONE, UP, DOWN, LEFT, RIGHT, SQUARE, HORN};
 extern enum rf_commands rf_command;
 
+
 void start_rf();
 void stop_rf();
+
+void set_rf_cmd(rf_commands cmd);
 
 void flip();
 

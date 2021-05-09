@@ -1,7 +1,7 @@
 #ifndef IMU_H
 #define IMU_H
 
-#include "Arduino.h"
+#include <Arduino.h>
 
 
 #define MAG_INIT_MIN 22.
@@ -10,8 +10,8 @@
 #define ACC_INIT_MIN 0.95
 #define ACC_INIT_MAX 1.05
 
-#define K_SMOOTH 0.1
-#define MAG_CHANGE_THRESHOLD 2.0
+#define K_SMOOTH 0.2
+#define MAG_CHANGE_THRESHOLD 0.5
 
 #define CALIB_SAMPLES 9
 #define CALIB_DELAY 1000

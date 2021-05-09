@@ -25,6 +25,7 @@ BLEService* magService;
 BLEService* accService;
 BLEService* aliveService;
 BLEService* stService;
+BLEService* commandService;
 // TODO: ajouter temperature
 
 // BLE Characteristic
@@ -56,9 +57,12 @@ BLECharacteristic *stChar[ST_NB];
 BLEDescriptor *stDescr[ST_NB];
 
 // Commands
-BLEBoolCharacteristic* *moveUpChar,*moveDownChar,*moveLeftChar,*moveRightChar,*trackChar;
-
-
+BLEByteCharacteristic *rfCmdChar;
+BLEDescriptor *rfCmdDescr;
+//BLEBoolCharacteristic *trackChar;
+//BLEDescriptor *trackDescr;
+BLEFloatCharacteristic *targetHeadingChar;
+BLEDescriptor *targetHeadingDescr;
 
 //   ---------------------------------------
 //   ---   Peripheral public functions   ---
@@ -212,6 +216,24 @@ void initBLEPeripheral() {
     stChar[i]->addDescriptor(*stDescr[i]);
   }
 
+  commandService = new BLEService(UUID_PREFIX "70");
+  rfCmdChar = new BLEByteCharacteristic (UUID_PREFIX "71", BLERead | BLEWrite | BLENotify);
+  rfCmdDescr = new BLEDescriptor ("2901", "RF command 0:NA 1:UP 2:DOWN 3:LEFT 4:RIGHT 5:SQUARE 6:HORN");
+  commandService->addCharacteristic(*rfCmdChar);
+  rfCmdChar->addDescriptor(*rfCmdDescr);
+  rfCmdChar->writeValue(0);
+  //trackChar = new BLEBoolCharacteristic (UUID_PREFIX "72", BLERead | BLEWrite | BLENotify);
+  //trackDescr = new BLEDescriptor ("2901", "Enable tracking");
+  //commandService->addCharacteristic(*trackChar);
+  //trackChar->addDescriptor(*trackDescr);
+  //trackChar->writeValue(0);
+  targetHeadingChar = new BLEFloatCharacteristic (UUID_PREFIX "73", BLERead | BLEWrite | BLENotify);
+  targetHeadingDescr = new BLEDescriptor ("2901", "Heading target in deg");
+  commandService->addCharacteristic(*targetHeadingChar);
+  targetHeadingChar->addDescriptor(*targetHeadingDescr);
+  targetHeadingChar->writeValue(0.);
+
+
   BLE.setLocalName("Cupola");
   BLE.setAdvertisedService(*batteryService);
 
@@ -222,6 +244,7 @@ void initBLEPeripheral() {
   BLE.addService(*accService);
   BLE.addService(*aliveService);
   BLE.addService(*stService);
+  BLE.addService(*commandService);
 
   BLE.setEventHandler(BLEConnected, blePeripheralConnectHandler);
   BLE.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
@@ -231,6 +254,7 @@ void initBLEPeripheral() {
   magRawYChar->setEventHandler(BLERead, magReadHandler);
   magRawZChar->setEventHandler(BLERead, magReadHandler);
   headRawChar->setEventHandler(BLERead, magReadHandler);
+  //rfCmdChar->setEventHandler(BLEWrite, rfCmdHandler);
 
   BLE.advertise();
 
@@ -286,7 +310,7 @@ void writeMagFilt(float mag_filt[]) {
     magFiltChar[i]->writeValue(mag_filt[i]);
   }
 
-  headFiltChar->writeValue(heading(mag_smooth)*360/2./PI);
+  headFiltChar->writeValue(heading(mag_filt)*360/2./PI);
 
 }
 
@@ -312,9 +336,20 @@ enum states readState() {
   return (enum states)stateChar->value();
 }
 
+// update rf commande characteristic
+void writeRfCmd(enum rf_commands cmd){
+  rfCmdChar->writeValue((byte)cmd);
+}
 
+// read State characteristic
+enum rf_commands readRfCmd() {
+  return (enum rf_commands)rfCmdChar->value();
+}
 
-
+float readTarget(){
+  log_d("%f",targetHeadingChar->value());
+  return targetHeadingChar->value();
+}
 
 // update switches characteristics
 void updateSwitches() {

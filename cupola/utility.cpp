@@ -2,7 +2,7 @@
 
 #include <stdio.h>
 #include <stdarg.h>
-#include "Arduino.h"
+#include <Arduino.h>
 
 void log_e(char *fmt, ... ) {
   char buf[128]; // resulting string limited to 128 chars

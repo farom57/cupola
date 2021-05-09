@@ -1,5 +1,5 @@
 #include <math.h>
-#include "Arduino.h"
+#include <Arduino.h>
 #include "vector.h"
 #include "utility.h"
 #include "imu.h"
