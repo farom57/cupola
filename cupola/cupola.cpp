@@ -261,12 +261,12 @@ void loop_debug() {
     log_("%f %f %f",head,target,diff);
     if(diff>3){
       set_rf_cmd(RIGHT);
-      ledRGB(rf_command&0b100,rf_command&0b010,rf_command&0b001);
-    }
-    if(diff<-3){
+    }else if(diff<-3){
       set_rf_cmd(LEFT);
-      ledRGB(rf_command&0b100,rf_command&0b010,rf_command&0b001);
+    }else{
+      set_rf_cmd(NONE);
     }
+    ledRGB(rf_command&0b100,rf_command&0b010,rf_command&0b001);
     
     delay(100);
   }
