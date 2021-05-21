@@ -205,7 +205,7 @@ void loop_debug() {
     writeState(state);
     current_calib_sample = 0;
     ledRGB(false, false, false);
-    delay(CALIB_DELAY);
+    delay(100);
   }
 
   // Cupola manual rotation: DIP +XX+ and push
@@ -250,22 +250,27 @@ void loop_debug() {
     updateSwitches();
     updateMag();
     updateAcc();
+    updateHeading();
+    
     float mag_calib[3];
     compassCalib(mag_raw, mag_calib);
-    float head = DEG(heading(mag_smooth));
+    float head = heading_smooth;
     float target = readTarget();
     float diff = target-head;
     if(diff>180.) diff-=360.;
     if(diff<-180.) diff+=360.;
     //log_("%fdeg\t%f\t%f\t%f\t%f", head, mag_calib[0], mag_calib[1], mag_calib[2], norm(mag_calib));
     log_("%f %f %f",head,target,diff);
-    if(diff>3){
-      set_rf_cmd(RIGHT);
-    }else if(diff<-3){
-      set_rf_cmd(LEFT);
-    }else{
+    if(rf_command==NONE){
+      if(diff>HEADING_THRESHOLD){
+        set_rf_cmd(RIGHT);
+      }else if(diff<-HEADING_THRESHOLD){
+        set_rf_cmd(LEFT);
+      }
+    }else if((rf_command==RIGHT && diff<0) || (rf_command==LEFT && diff>0)){
       set_rf_cmd(NONE);
     }
+
     ledRGB(rf_command&0b100,rf_command&0b010,rf_command&0b001);
     
     delay(100);
@@ -278,32 +283,36 @@ void loop_debug() {
   if (state == LOG_SENSOR) {
     ledRYG(false, true, true);
     ledRGB(false, false, true);
+    updateSwitches();
+    updateMag();
+    float mag_cal[3];
+    compassCalib(mag_smooth,mag_cal);
+    log_("%7.3f %7.3f %7.3f %7.5f %7.5f %7.5f %7.2f %7.2f",mag_smooth[0],mag_smooth[1],mag_smooth[2],mag_cal[0],mag_cal[1],mag_cal[2],heading(mag_raw)*180./3.14159,heading(mag_smooth)*180./3.14159);
+    //readMagConv(mag_raw);
+    //readAccConv(acc_filt);
 
-    readMagConv(mag_raw);
-    readAccConv(acc_filt);
+    //log_("raw sample (acc;mag)");
+    //m_print("", acc_filt, 3, 1);
+    //m_print("", mag_raw, 3, 1);
 
-    log_("raw sample (acc;mag)");
-    m_print("", acc_filt, 3, 1);
-    m_print("", mag_raw, 3, 1);
+    //float mag_calibrated[3], acc_calibrated[3];
+    //mountCalib(mag_raw, (const float *)st_A_mag_inv, st_bias_mag, 1, mag_calibrated);
+    //mountCalib(acc_filt, (const float *)st_A_acc_inv, st_bias_acc, 1, acc_calibrated);
 
-    float mag_calibrated[3], acc_calibrated[3];
-    mountCalib(mag_raw, (const float *)st_A_mag_inv, st_bias_mag, 1, mag_calibrated);
-    mountCalib(acc_filt, (const float *)st_A_acc_inv, st_bias_acc, 1, acc_calibrated);
+    //log_("cal sample (acc;mag)");
+    //m_print("", acc_calibrated, 3, 1);
+    //m_print("", mag_calibrated, 3, 1);
 
-    log_("cal sample (acc;mag)");
-    m_print("", acc_calibrated, 3, 1);
-    m_print("", mag_calibrated, 3, 1);
+    //float ha_rot, dec_rot;
+    //float m_theo[3];
+    //normalize(st_ref_mag, m_theo);
+    //mountRot(mag_calibrated, acc_calibrated, RAD(st_lat), m_theo, st_sigma_mag, st_sigma_acc, &ha_rot, &dec_rot);
 
-    float ha_rot, dec_rot;
-    float m_theo[3];
-    normalize(st_ref_mag, m_theo);
-    mountRot(mag_calibrated, acc_calibrated, RAD(st_lat), m_theo, st_sigma_mag, st_sigma_acc, &ha_rot, &dec_rot);
-
-    log_("retrieved angles:");
-    log_("ha_rot = %f", DEG(ha_rot));
-    log_("dec_rot = %f", DEG(dec_rot));
+    //log_("retrieved angles:");
+    //log_("ha_rot = %f", DEG(ha_rot));
+    //log_("dec_rot = %f", DEG(dec_rot));
     //log_("%f\t%f\t%f\t\t%f\t%f\t%f\t\t%f\t%f", mag_calibrated[0], mag_calibrated[1], mag_calibrated[2], acc_calibrated[0], acc_calibrated[1], acc_calibrated[2], DEG(ha_rot), DEG(dec_rot));
-    delay(CALIB_DELAY);
+    delay(200);
   }
 
 

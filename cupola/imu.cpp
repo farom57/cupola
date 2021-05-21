@@ -8,6 +8,7 @@
 #include "vector.h"
 #include "io.h"
 #include "ble.h"
+#include "rf.h"
 
 #define LSM9DS1_ADDRESS            0x6b
 #define LSM9DS1_WHO_AM_I           0x0f
@@ -40,6 +41,9 @@ bool mag_error_flag = false;
 float sample_mag_raw[3][CALIB_SAMPLES];
 float sample_acc_raw[3][CALIB_SAMPLES];
 int current_calib_sample = 0;
+float heading_smooth; // heading estimation
+long last_heading=-1; // last heading update date
+
 
 
 void initIMUMag() {
@@ -276,6 +280,86 @@ void updateMag() {
       mag_error_flag = true;
     }
   }
+}
+
+void updateHeading(){
+  // state: x=heading in deg
+  // command: u rotation speed (positive clockwise, 0° when static and +/-3deg/s when moving)
+  // process noise variance: sqrt(Q) = 0.5deg/sec when static and 1.5deg/s when moving
+  // observation noise variance: sqrt(R) = TBD
+  // observation: z in deg
+  // observation model: identity z=H*x=x (+noise)
+  // estimate variance: P
+  // prediction: 
+  //   state:    x_k|k-1 = x_k-1|k-1 + u(t_k)*(t_k-t_k-1)
+  //   variance: P_k|k-1 = P_k-1|k-1 + Q_k
+  // update:
+  //   innovation y_k = z_k - x_k|k-1
+  //   innovation variance: S_k = P_k|k-1 + R_k
+  //   Kalman gain: K = P_k|k-1/S_k = (P_k|k-1) / (P_k|k-1 + R_k)
+  //   updated state estimate x_k|k = x_k|k-1 + K*y_k
+  //   updated state variance P_k|k = (1-K)*P_k|k-1
+
+    // settings:
+  // MOVING_SPEED 
+  // MOVING_NOISE standard deviation of process noise when moving
+  // REST_NOISE standard deviation of process noise when static
+  // MEASUREMENT_NOISE standard deviation of measurement
+  
+  // global variables:
+  //float heading_smooth; // heading estimation (x_k-1|k-1 and x_k|k)
+  //long last_heading=-1; // last heading update date
+  static float P=0.; // variance (P_k-1|k-1 or P_k|k)
+  float dt;
+  float heading_predicted; //x_k|k-1
+  float P_predicted; //P_k|k-1
+  float u, u_noise,z,y,S,K;
+
+  if(last_heading<0){// initialisation
+    heading_smooth=DEG(heading(mag_raw));
+    P=MEASUREMENT_NOISE*MEASUREMENT_NOISE;
+    last_heading=millis();
+    return;
+  }
+
+  dt=(float)(millis()-last_heading)*0.001;
+  last_heading=millis();
+
+  if(rf_command==RIGHT){
+    u=MOVING_SPEED;
+    u_noise=MOVING_NOISE*MOVING_NOISE;
+  }else if(rf_command==LEFT){
+    u=-MOVING_SPEED;
+    u_noise=MOVING_NOISE*MOVING_NOISE;
+  }else{
+    u=0;
+    u_noise=REST_NOISE*REST_NOISE;
+  }
+
+
+  // prediction: 
+  //   state:    x_k|k-1 = x_k-1|k-1 + u(t_k)*(t_k-t_k-1)
+  heading_predicted = heading_smooth+u*dt;
+  //   variance: P_k|k-1 = P_k-1|k-1 + Q_k
+  P_predicted = P+u_noise*dt;
+
+  // update:
+  //   innovation y_k = z_k - x_k|k-1
+  z=DEG(heading(mag_raw));
+  y=z-heading_predicted;
+  if(y>180.) y-=360.;
+  if(y<-180.) y+=360.;
+  //   innovation variance: S_k = P_k|k-1 + R_k
+  S=P_predicted+MEASUREMENT_NOISE*MEASUREMENT_NOISE;
+  //   Kalman gain: K = P_k|k-1/S_k = (P_k|k-1) / (P_k|k-1 + R_k)
+  K=P_predicted/S;
+  //   updated state estimate x_k|k = x_k|k-1 + K*y_k
+  heading_smooth = heading_predicted + K*y;
+  if(heading_smooth>=360.) heading_smooth-=360.;
+  if(heading_smooth<0.) heading_smooth+=360.;
+  //   updated state variance P_k|k = (1-K)*P_k|k-1
+  P=P_predicted*(1.-K);
+
 }
 
 void updateAcc() {

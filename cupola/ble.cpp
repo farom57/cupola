@@ -41,10 +41,10 @@ BLEByteCharacteristic* stateChar;
 BLEDescriptor* stateDescr;
 
 // Mag & Acc
-BLECharacteristic *magRawStringChar, *magFiltStringChar, *accStringChar;
+BLECharacteristic *magRawStringChar, *magFiltStringChar, *accStringChar, *headStrChar;
 BLEDescriptor *magRawStringDescr, *magFiltStringDescr, *accStringDescr;
 BLEFloatCharacteristic *magRawXChar, *magRawYChar, *magRawZChar, *magFiltXChar, *magFiltYChar, *magFiltZChar, *accXChar, *accYChar, *accZChar, *headRawChar, *headFiltChar;
-BLEDescriptor *magRawXDescr, *magRawYDescr, *magRawZDescr, *magFiltXDescr, *magFiltYDescr, *magFiltZDescr, *accXDescr, *accYDescr, *accZDescr, *headRawDescr, *headFiltDescr;
+BLEDescriptor *magRawXDescr, *magRawYDescr, *magRawZDescr, *magFiltXDescr, *magFiltYDescr, *magFiltZDescr, *accXDescr, *accYDescr, *accZDescr, *headRawDescr, *headFiltDescr, *headStrDescr;
 BLEFloatCharacteristic *magRawChar[3], *magFiltChar[3], *accChar[3];
 BLEDescriptor *magRawDescr[3], *magFiltDescr[3], *accDescr[3];
 
@@ -147,6 +147,8 @@ void initBLEPeripheral() {
   headRawDescr = new BLEDescriptor ("2901", "Heading raw");
   headFiltChar = new BLEFloatCharacteristic(UUID_PREFIX "3A", BLERead | BLENotify);
   headFiltDescr = new BLEDescriptor ("2901", "Heading filt");
+  headStrChar = new BLECharacteristic(UUID_PREFIX "3B", BLERead | BLENotify, "xxx.xxxxx");
+  headStrDescr = new BLEDescriptor ("2901", "Heading filt str");
 
 
   magService->addCharacteristic(*magRawStringChar);
@@ -161,6 +163,9 @@ void initBLEPeripheral() {
   magService->addCharacteristic(*headFiltChar);
   headFiltChar->addDescriptor(*headFiltDescr);
   headFiltChar->writeValue(0.);
+  magService->addCharacteristic(*headStrChar);
+  headStrChar->addDescriptor(*headStrDescr);
+  headStrChar->writeValue("xxx.xxxxx");
 
   for (int i = 0; i <= 2; i++) {
     magService->addCharacteristic(*magRawChar[i]);
@@ -310,8 +315,9 @@ void writeMagFilt(float mag_filt[]) {
     magFiltChar[i]->writeValue(mag_filt[i]);
   }
 
-  headFiltChar->writeValue(heading(mag_filt)*360/2./PI);
-
+  headFiltChar->writeValue(heading_smooth);
+  snprintf(buf, 32, "%8.5f", heading_smooth);
+  headStrChar->writeValue(buf);
 }
 
 

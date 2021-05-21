@@ -28,6 +28,7 @@ extern float mag_filt[3];
 extern float mag_filt_remote[3];
 extern float acc_filt[3];
 extern int current_calib_sample;
+extern float heading_smooth; // heading estimation
 
 void initIMUMag();
 void initIMUMagAcc();
@@ -44,6 +45,7 @@ void readAccConv(float res[]);
 
 void updateMag();
 void updateAcc();
+void updateHeading();
 
 int readRegister(uint8_t slaveAddress, uint8_t address);
 int readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* data, size_t length);
@@ -52,7 +54,8 @@ int writeRegister(uint8_t slaveAddress, uint8_t address, uint8_t value);
 void sampleCalib();   // Acquire and save calibration sample
 void compassCalibCalc();  // Compute compass calibration parameters
 void compassCalib(float in[], float res[]); // correct res
-float heading(float in[]); // return the heading in rad
+float heading(float in[]); // return the heading in rad based on a single measure
+
 
 void mountCalib(const float raw[], const float invA[], const float bias[], int N, float res[]); // calibrate mount measurements
 float mountCalibCalc();// Compute mount calibration
