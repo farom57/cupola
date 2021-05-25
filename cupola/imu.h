@@ -13,7 +13,8 @@
 #define K_SMOOTH 0.2
 #define MAG_CHANGE_THRESHOLD 0.5
 
-#define CALIB_SAMPLES 9
+#define CALIB_SAMPLES 60
+#define CALIB_SUB_SAMPLES 5
 #define CALIB_DELAY 1000
 
 #define DEG(a)  a*360./2./PI
@@ -28,6 +29,9 @@ extern float mag_filt[3];
 extern float mag_filt_remote[3];
 extern float acc_filt[3];
 extern int current_calib_sample;
+extern int current_calib_sub_sample;
+extern float sample_mag_raw[3][CALIB_SAMPLES];
+extern float sample_acc_raw[3][CALIB_SAMPLES];
 extern float heading_smooth; // heading estimation
 
 void initIMUMag();
@@ -51,18 +55,18 @@ int readRegister(uint8_t slaveAddress, uint8_t address);
 int readRegisters(uint8_t slaveAddress, uint8_t address, uint8_t* data, size_t length);
 int writeRegister(uint8_t slaveAddress, uint8_t address, uint8_t value);
 
-void sampleCalib();   // Acquire and save calibration sample
+bool sampleCalib();   // Acquire and save calibration sample, return true if new sample availlable
 void compassCalibCalc();  // Compute compass calibration parameters
 void compassCalib(float in[], float res[]); // correct res
 float heading(float in[]); // return the heading in rad based on a single measure
 
 
-void mountCalib(const float raw[], const float invA[], const float bias[], int N, float res[]); // calibrate mount measurements
-float mountCalibCalc();// Compute mount calibration
-float mountCalibCalc(const float raw[3][CALIB_SAMPLES], const float angles[3][CALIB_SAMPLES], const float theory[3], float A[3][3], float bias[3]);// Compute mount calibration parameters A and bias, return sigma
-void mountRot(const float mag[3], const float acc[3], float lat, const float mag_ref[3], float sigma_mag, float sigma_acc, float *ha_rot, float *dec_rot);//Estimate the rotation of the mount
-void mountRot(const float mag[], const float acc[], float lat, const float mag_ref[3], float sigma_mag, float sigma_acc, float ha_rot[], float dec_rot[], int N); //Estimate the rotation of the mount
+// void mountCalib(const float raw[], const float invA[], const float bias[], int N, float res[]); // calibrate mount measurements
+// float mountCalibCalc();// Compute mount calibration
+// float mountCalibCalc(const float raw[3][CALIB_SAMPLES], const float angles[3][CALIB_SAMPLES], const float theory[3], float A[3][3], float bias[3]);// Compute mount calibration parameters A and bias, return sigma
+// void mountRot(const float mag[3], const float acc[3], float lat, const float mag_ref[3], float sigma_mag, float sigma_acc, float *ha_rot, float *dec_rot);//Estimate the rotation of the mount
+// void mountRot(const float mag[], const float acc[], float lat, const float mag_ref[3], float sigma_mag, float sigma_acc, float ha_rot[], float dec_rot[], int N); //Estimate the rotation of the mount
 
-void test();
+
 
 #endif

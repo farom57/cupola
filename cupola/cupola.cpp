@@ -47,45 +47,45 @@ void setup() {
   v_print("st_compass_bias", st_compass_bias);
   v_print("st_compass_amp", st_compass_amp);
   m_print("st_compass_rot", (float*)st_compass_rot);
-  log_d("st_compass_heading_bias=%f", st_compass_heading_bias);
+  log_("st_compass_heading_bias=%f", st_compass_heading_bias);
   log_i("Compilation date: " __DATE__ " " __TIME__);
 
-  if (operating_mode == CUPOLA) {
-    //IMU test (mag only in CUPOLA mode)
-    initIMUMag();
-    if (!testIMUMag()) {
-      log_e("Failed to initialize Magnetometer!");
-      ledRGB(false, true, false);
-      while (1);
-    }
-    stopIMU(); // stop the IMU, it is activated on demand to save power
+  // if (operating_mode == CUPOLA) {
+  //   //IMU test (mag only in CUPOLA mode)
+  //   initIMUMag();
+  //   if (!testIMUMag()) {
+  //     log_e("Failed to initialize Magnetometer!");
+  //     ledRGB(false, true, false);
+  //     while (1);
+  //   }
+  //   stopIMU(); // stop the IMU, it is activated on demand to save power
 
-    initBLEPeripheral();
-    state = CONNECTION;
-  }
-
-
-  if (operating_mode == MOUNT) {
-    // IMU test:
-    initIMUMagAcc();
-    if (!testIMUMag()) {
-      log_e("Failed to initialize Magnetometer!");
-      ledRGB(false, true, false);
-      while (1);
-    }
-    if (!testIMUAcc()) {
-      log_e("Failed to initialize Accelerometer!");
-      ledRGB(true, false, false);
-      while (1);
-    }
-    stopIMU(); // stop the IMU, it is activated on demand to save power
-
-    initBLECentral();
-    state = CONNECTION;
-  }
+  //   initBLEPeripheral();
+  //   state = CONNECTION;
+  // }
 
 
-  if (operating_mode == DEBUG) {
+  // if (operating_mode == MOUNT) {
+  //   // IMU test:
+  //   initIMUMagAcc();
+  //   if (!testIMUMag()) {
+  //     log_e("Failed to initialize Magnetometer!");
+  //     ledRGB(false, true, false);
+  //     while (1);
+  //   }
+  //   if (!testIMUAcc()) {
+  //     log_e("Failed to initialize Accelerometer!");
+  //     ledRGB(true, false, false);
+  //     while (1);
+  //   }
+  //   stopIMU(); // stop the IMU, it is activated on demand to save power
+
+  //   initBLECentral();
+  //   state = CONNECTION;
+  // }
+
+
+  // if (operating_mode == DEBUG) {
     // IMU test
     initIMUMagAcc();
     if (!testIMUMag()) {
@@ -100,7 +100,7 @@ void setup() {
     stopIMU(); // stop the IMU, it is activated on demand to save power
     initBLEPeripheral();
     state = CONNECTION;
-  }
+  // }
 
   start_rf();
 
@@ -110,18 +110,18 @@ void setup() {
 
 
 void loop() {
-  if (operating_mode == MOUNT) {
-    loop_mount();
-  }
-  if (operating_mode == CUPOLA) {
-    loop_cupola();
-  }
-  if (operating_mode == DEBUG) {
-    loop_debug();
-  }
-}
+//   if (operating_mode == MOUNT) {
+//     loop_mount();
+//   }
+//   if (operating_mode == CUPOLA) {
+//     loop_cupola();
+//   }
+//   if (operating_mode == DEBUG) {
+//     loop_debug();
+//   }
+// }
 
-void loop_debug() {
+// void loop_debug() {
   ledRYG(false, false, false);
   ledRGB(false, false, false);
   
@@ -138,7 +138,8 @@ void loop_debug() {
   // Disconnection
   if ((state == STANDBY || state == ON) && !connectedPeripheral()) {
     stopIMU();
-    system_reset();
+  // system_reset();
+  NVIC_SystemReset();
     log_e("Disconnection, System reset");
   }
   // Request received to change state to ON
@@ -157,56 +158,28 @@ void loop_debug() {
     writeState(state);
     log_i("State change received, state change to STANDBY");
   }
-
-
-  // Cupola or mount calibration: DIP +X__ and push
-  // ++__ for mount
-  // +___ for cupola
-  if (switch_1() && !switch_3() && !switch_4() && btn()) {
-    // au premier appui initialiser
-    // pour chaque appui: attendre 1s et capturer
-    // au dernier appui, arreter et appeler la fonction pour la coupole ou la monture
-    if (current_calib_sample == 0) {
-      state = CALIB;
-      initIMUMagAcc();
-      writeState(state);
-      log_i("Calibration mode");
-      log_("Step\tMag_x  \tMag_y  \tMag_z  \tAcc_x  \tAcc_y  \tAcc_z  \t");
-    }
-    ledRGB(true, true, true);
-    delay(CALIB_DELAY);
-    ledRGB(false, false, false);
-    sampleCalib(); // current_calib_sample is incremented
-    log_d("%i\t%f\t%f\t%f\t%f\t%f\t%f\t", current_calib_sample, mag_raw[0], mag_raw[1], mag_raw[2], acc_filt[0], acc_filt[1], acc_filt[2]);
-
-    if (current_calib_sample == CALIB_SAMPLES) {
-      stopIMU();
-      current_calib_sample = 0;
-      state = connectedPeripheral() ? STANDBY : CONNECTION;
-      writeState(state);
-      if (switch_2()) {
-        mountCalibCalc();
-      } else {
-        compassCalibCalc();
-      }
-    }
+  // cupola calibration: ++__ and push
+  if ((state == STANDBY||state==CONNECTION) && switch_1() && switch_2() && !switch_3() && !switch_4() && btn()){
+    state = CALIB;
+    initIMUMagAcc();
+    writeState(state);
+    log_i("Calibration mode");
+    log_("Step\tMag_x  \tMag_y  \tMag_z  \tAcc_x  \tAcc_y  \tAcc_z  \t");
+    current_calib_sample = 0;
+    current_calib_sub_sample = 0;
   }
-
-  // Sensor log: +++_
-  if (switch_1() && switch_2() && switch_3() && !switch_4() && btn() && state != LOG_SENSOR) {
+  // sensor log: +++_ and push
+  if ((state == STANDBY||state==CONNECTION) && switch_1() && switch_2() && switch_3() && !switch_4() && btn()){
     state = LOG_SENSOR;
     initIMUMagAcc();
     writeState(state);
     log_i("Sensor log mode");
+    log_("Step\tMag_x  \tMag_y  \tMag_z  \tMag_cal_x  \tMag_cal_y  \tMag_cal_z  \tHeading\t Heading2\t");
     current_calib_sample = 0;
-  } else if (state == LOG_SENSOR && btn()) {
-    stopIMU();
-    state = connectedPeripheral() ? STANDBY : CONNECTION;
-    writeState(state);
-    current_calib_sample = 0;
-    ledRGB(false, false, false);
-    delay(100);
+    current_calib_sub_sample = 0;
   }
+
+  
 
   // Cupola manual rotation: DIP +XX+ and push
   // ++_+ and push for right
@@ -238,18 +211,18 @@ void loop_debug() {
   if (state == CONNECTION) {
     ledRYG(true, false, true);
     connectBLEPeripheral();
-    delay(100);
+    
   }
   if (state == STANDBY) {
     ledRYG(false, false, true);
     updateSwitches();
-    delay(100);
+    
   }
   if (state == ON) {
     ledRYG(false, true, true);
     updateSwitches();
     updateMag();
-    updateAcc();
+    //updateAcc();
     updateHeading();
     
     float mag_calib[3];
@@ -273,46 +246,39 @@ void loop_debug() {
 
     ledRGB(rf_command&0b100,rf_command&0b010,rf_command&0b001);
     
-    delay(100);
+    
   }
   if (state == CALIB) {
     ledRYG(false, true, true);
     ledRGB(false, false, true);
+    if(sampleCalib()){
+      ledRGB(true, true, true);
+      log_d("%i\t%f\t%f\t%f\t%f\t%f\t%f\t", current_calib_sample, mag_raw[0], mag_raw[1], mag_raw[2], acc_filt[0], acc_filt[1], acc_filt[2]);
+    }
+    
+    if (current_calib_sample == CALIB_SAMPLES) {
+      stopIMU();
+      current_calib_sample = 0;
+      state = connectedPeripheral() ? STANDBY : CONNECTION;
+      writeState(state);
+      compassCalibCalc();
+    }
   }
-
   if (state == LOG_SENSOR) {
     ledRYG(false, true, true);
     ledRGB(false, false, true);
-    updateSwitches();
-    updateMag();
-    float mag_cal[3];
-    compassCalib(mag_smooth,mag_cal);
-    log_("%7.3f %7.3f %7.3f %7.5f %7.5f %7.5f %7.2f %7.2f",mag_smooth[0],mag_smooth[1],mag_smooth[2],mag_cal[0],mag_cal[1],mag_cal[2],heading(mag_raw)*180./3.14159,heading(mag_smooth)*180./3.14159);
-    //readMagConv(mag_raw);
-    //readAccConv(acc_filt);
-
-    //log_("raw sample (acc;mag)");
-    //m_print("", acc_filt, 3, 1);
-    //m_print("", mag_raw, 3, 1);
-
-    //float mag_calibrated[3], acc_calibrated[3];
-    //mountCalib(mag_raw, (const float *)st_A_mag_inv, st_bias_mag, 1, mag_calibrated);
-    //mountCalib(acc_filt, (const float *)st_A_acc_inv, st_bias_acc, 1, acc_calibrated);
-
-    //log_("cal sample (acc;mag)");
-    //m_print("", acc_calibrated, 3, 1);
-    //m_print("", mag_calibrated, 3, 1);
-
-    //float ha_rot, dec_rot;
-    //float m_theo[3];
-    //normalize(st_ref_mag, m_theo);
-    //mountRot(mag_calibrated, acc_calibrated, RAD(st_lat), m_theo, st_sigma_mag, st_sigma_acc, &ha_rot, &dec_rot);
-
-    //log_("retrieved angles:");
-    //log_("ha_rot = %f", DEG(ha_rot));
-    //log_("dec_rot = %f", DEG(dec_rot));
-    //log_("%f\t%f\t%f\t\t%f\t%f\t%f\t\t%f\t%f", mag_calibrated[0], mag_calibrated[1], mag_calibrated[2], acc_calibrated[0], acc_calibrated[1], acc_calibrated[2], DEG(ha_rot), DEG(dec_rot));
-    delay(200);
+    if(sampleCalib()){
+      ledRGB(true, true, true);
+      current_calib_sample=0;
+      float mag_cal[3],mag[3];
+      mag[0]=sample_mag_raw[0][0];
+      mag[1]=sample_mag_raw[1][0];
+      mag[2]=sample_mag_raw[2][0];
+      compassCalib(mag_raw,mag_cal);
+      //log_d("%i\t%f\t%f\t%f\t%f\t%f\t%f\t", current_calib_sample, mag_raw[0], mag_raw[1], mag_raw[2], acc_filt[0], acc_filt[1], acc_filt[2]);
+      //log_d("%7.3f %7.3f %7.3f %7.5f %7.5f %7.5f %7.2f %7.2f",mag[0], mag[1], mag[2],mag_cal[0],mag_cal[1],mag_cal[2],heading(mag_raw)*180./3.14159,heading(mag_smooth)*180./3.14159);
+      log_d("%f %f %f %f",mag_cal[0],mag_cal[1],mag_cal[2],heading(mag_raw)*180./3.14159);
+    }
   }
 
 
@@ -327,119 +293,119 @@ void loop_debug() {
 
 
 
-void loop_mount() {
-  ledRYG(false, false, false);
-  ledRGB(false, false, false);
-  BLE.poll();
+// void loop_mount() {
+//   ledRYG(false, false, false);
+//   ledRGB(false, false, false);
+//   BLE.poll();
 
-  // state transitions
-  // Connection, state change directly to ON in debug mode
-  if (state == CONNECTION && connectedCentral()) {
-    state = STANDBY;
-    log_i("Connection, state change to STANDBY");
-  }
-  // Disconnection
-  if (state > CONNECTION && !connectedCentral()) {
-    stopIMU();
-    system_reset();
-    log_e("Disconnection, System reset");
-  }
-  //button pressed and released
-  bool btn_changed = (old_local_btn_state && !btn()) || (old_remote_btn_state && !remoteBtn());
-  old_local_btn_state = btn();
-  old_remote_btn_state = remoteBtn();
-  if (state == STANDBY && btn_changed) {
-    state = ON;
-    setRemoteState(ON);
-    btn_changed = false;
-    log_i("Button pressed, state change to ON");
-  }
-  if (state == ON && btn_changed) {
-    state = STANDBY;
-    setRemoteState(STANDBY);
-    btn_changed = false;
-    log_i("Button pressed, state change to STANDBY");
-  }
+//   // state transitions
+//   // Connection, state change directly to ON in debug mode
+//   if (state == CONNECTION && connectedCentral()) {
+//     state = STANDBY;
+//     log_i("Connection, state change to STANDBY");
+//   }
+//   // Disconnection
+//   if (state > CONNECTION && !connectedCentral()) {
+//     stopIMU();
+//     system_reset();
+//     log_e("Disconnection, System reset");
+//   }
+//   //button pressed and released
+//   bool btn_changed = (old_local_btn_state && !btn()) || (old_remote_btn_state && !remoteBtn());
+//   old_local_btn_state = btn();
+//   old_remote_btn_state = remoteBtn();
+//   if (state == STANDBY && btn_changed) {
+//     state = ON;
+//     setRemoteState(ON);
+//     btn_changed = false;
+//     log_i("Button pressed, state change to ON");
+//   }
+//   if (state == ON && btn_changed) {
+//     state = STANDBY;
+//     setRemoteState(STANDBY);
+//     btn_changed = false;
+//     log_i("Button pressed, state change to STANDBY");
+//   }
 
-  // state operations
-  if (state == CONNECTION) {
-    ledRYG(true, false, true);
-    connectBLECentral();
-  }
-  if (state == STANDBY) {
-    ledRYG(false, false, true);
-  }
-  if (state == ON) {
-    ledRYG(false, true, true);
-  }
+//   // state operations
+//   if (state == CONNECTION) {
+//     ledRYG(true, false, true);
+//     connectBLECentral();
+//   }
+//   if (state == STANDBY) {
+//     ledRYG(false, false, true);
+//   }
+//   if (state == ON) {
+//     ledRYG(false, true, true);
+//   }
 
-  // Error
-  if (acc_error_flag || mag_error_flag) {
-    //in debug mode, error are displayed with the led but ignored
-    ledRGB(acc_error_flag, mag_error_flag, false);
-    log_e("IMU error, acc_error_flag=%u mag_error_flag=%u", acc_error_flag, mag_error_flag);
-  }
-  delay(LOOP_PERIOD);
-}
+//   // Error
+//   if (acc_error_flag || mag_error_flag) {
+//     //in debug mode, error are displayed with the led but ignored
+//     ledRGB(acc_error_flag, mag_error_flag, false);
+//     log_e("IMU error, acc_error_flag=%u mag_error_flag=%u", acc_error_flag, mag_error_flag);
+//   }
+//   delay(LOOP_PERIOD);
+// }
 
-void loop_cupola() {
-  BLE.poll();
-  checkStWritten();
-  // state transitions
-  // Connection, state change directly to ON in debug mode
-  if (state == CONNECTION && connectedPeripheral()) {
-    state = STANDBY;
-    writeState(state);
-    log_i("Connection, state change to STANDBY");
-  }
-  // Disconnection
-  if (state > CONNECTION && !connectedPeripheral()) {
-    stopIMU();
-    system_reset();
-    log_e("Disconnection, System reset");
-  }
-  // Request received to change state to ON
-  if (state == STANDBY && readState() == ON) {
-    state = ON;
-    initIMUMag();
-    writeMagRaw(mag_raw);
-    writeMagFilt(mag_filt);
-    writeState(state);
-    log_i("State change received, state change to ON");
-  }
-  // Request received to change state to STANDBY
-  if (state == ON && readState() == STANDBY) {
-    state = STANDBY;
-    stopIMU();
-    writeState(state);
-    log_i("State change received, state change to STANDBY");
-  }
-  ledRYG(false, false, false);
-  ledRGB(false, false, false);
+// void loop_cupola() {
+//   BLE.poll();
+//   checkStWritten();
+//   // state transitions
+//   // Connection, state change directly to ON in debug mode
+//   if (state == CONNECTION && connectedPeripheral()) {
+//     state = STANDBY;
+//     writeState(state);
+//     log_i("Connection, state change to STANDBY");
+//   }
+//   // Disconnection
+//   if (state > CONNECTION && !connectedPeripheral()) {
+//     stopIMU();
+//     system_reset();
+//     log_e("Disconnection, System reset");
+//   }
+//   // Request received to change state to ON
+//   if (state == STANDBY && readState() == ON) {
+//     state = ON;
+//     initIMUMag();
+//     writeMagRaw(mag_raw);
+//     writeMagFilt(mag_filt);
+//     writeState(state);
+//     log_i("State change received, state change to ON");
+//   }
+//   // Request received to change state to STANDBY
+//   if (state == ON && readState() == STANDBY) {
+//     state = STANDBY;
+//     stopIMU();
+//     writeState(state);
+//     log_i("State change received, state change to STANDBY");
+//   }
+//   ledRYG(false, false, false);
+//   ledRGB(false, false, false);
 
-  // state operations
-  if (state == CONNECTION) {
-    ledRYG(true, false, true);
-    connectBLEPeripheral();
-  }
-  if (state == STANDBY) {
-    ledRYG(false, false, true);
-    updateSwitches();
-  }
-  if (state == ON) {
-    ledRYG(false, true, true);
-    updateSwitches();
-    updateMag();
-  }
+//   // state operations
+//   if (state == CONNECTION) {
+//     ledRYG(true, false, true);
+//     connectBLEPeripheral();
+//   }
+//   if (state == STANDBY) {
+//     ledRYG(false, false, true);
+//     updateSwitches();
+//   }
+//   if (state == ON) {
+//     ledRYG(false, true, true);
+//     updateSwitches();
+//     updateMag();
+//   }
 
-  // Error
-  if (acc_error_flag || mag_error_flag) {
-    //in debug mode, error are displayed with the led but ignored
-    ledRGB(acc_error_flag, mag_error_flag, false);
-    log_e("IMU error, acc_error_flag=%u mag_error_flag=%u", acc_error_flag, mag_error_flag);
-  }
-  delay(LOOP_PERIOD);
-}
+//   // Error
+//   if (acc_error_flag || mag_error_flag) {
+//     //in debug mode, error are displayed with the led but ignored
+//     ledRGB(acc_error_flag, mag_error_flag, false);
+//     log_e("IMU error, acc_error_flag=%u mag_error_flag=%u", acc_error_flag, mag_error_flag);
+//   }
+//   delay(LOOP_PERIOD);
+// }
 
 
 
@@ -508,25 +474,25 @@ void loop_cupola() {
 //  }
 //}
 
-void magReadHandler(BLEDevice central, BLECharacteristic characteristic) {
-  //log_d("BLE mag read event");
-  // if the continuous acquisition is OFF, start the IMU for a single measurment
-  if (state == STANDBY) {
-    initIMUMag();
-    while (!magAvailable()) {}
-    readMagConv(mag_raw);
-    v_copy(mag_raw, mag_filt);
-    stopIMU();
-    writeMagRaw(mag_raw);
-    writeMagFilt(mag_filt);
-  }
-  if (state == ON) {
-    v_copy(mag_smooth, mag_filt);
-    writeMagRaw(mag_raw);
-    writeMagFilt(mag_filt);
-  }
+// void magReadHandler(BLEDevice central, BLECharacteristic characteristic) {
+//   //log_d("BLE mag read event");
+//   // if the continuous acquisition is OFF, start the IMU for a single measurment
+//   if (state == STANDBY) {
+//     initIMUMag();
+//     while (!magAvailable()) {}
+//     readMagConv(mag_raw);
+//     v_copy(mag_raw, mag_filt);
+//     stopIMU();
+//     writeMagRaw(mag_raw);
+//     writeMagFilt(mag_filt);
+//   }
+//   if (state == ON) {
+//     v_copy(mag_smooth, mag_filt);
+//     writeMagRaw(mag_raw);
+//     writeMagFilt(mag_filt);
+//   }
 
-}
+// }
 
 // // called if manual rf command changed
 // void rfCmdHandler(BLEDevice central, BLECharacteristic characteristic){

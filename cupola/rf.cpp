@@ -3,7 +3,7 @@
 #include "utility.h"
 #include "ble.h"
 #include "io.h"
-//#include "mbed.h"
+#include "mbed.h"
 
 enum rf_commands rf_command;
 bool  rf_started = false;

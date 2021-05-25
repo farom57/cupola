@@ -139,13 +139,15 @@ void saveSt(const char* key, const char* val, int len) {
   memcpy(tmp, val, len);
 
   tmp[len] = 0;
-
   log_i("Saving setting %s=%s (size=%d)", key, tmp, len);
 
-  res = kv_set(key, tmp, len + 1, 0);
+
+  //res = kv_set(key, tmp, len + 1, 0);
+  res = kv_set(key, tmp, ST_VAL_LEN, 0);
   if (res != 0) {
     log_e("Error during setting saving. Error code: %d", res);
   }
+
 }
 
 
@@ -277,6 +279,8 @@ void saveFloat3St(const char* key, float val[3]) {
 
 
   sprintf(buf, "%.9g %.9g %.9g", val[0], val[1], val[2]);
+  // log_d("key=%s",key);
+  // log_d(buf);
 
   saveSt(key, buf, strlen(buf));
 }

@@ -6,6 +6,7 @@
 #include "utility.h"
 #include <ArduinoBLE.h>
 #include "nrf_temp.h"
+#include <Arduino.h>
 
 
 //   ---   BLE global variables   ---
@@ -59,8 +60,6 @@ BLEDescriptor *stDescr[ST_NB];
 // Commands
 BLEByteCharacteristic *rfCmdChar;
 BLEDescriptor *rfCmdDescr;
-//BLEBoolCharacteristic *trackChar;
-//BLEDescriptor *trackDescr;
 BLEFloatCharacteristic *targetHeadingChar;
 BLEDescriptor *targetHeadingDescr;
 
@@ -176,29 +175,29 @@ void initBLEPeripheral() {
     magFiltChar[i]->writeValue(0.);
   }
 
-  accService = new BLEService(UUID_PREFIX "40");
-  accStringChar = new BLECharacteristic(UUID_PREFIX "41", BLERead | BLENotify, " xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
-  accStringDescr = new BLEDescriptor ("2901", "Acc X,Y,Z");
-  accXChar = new BLEFloatCharacteristic(UUID_PREFIX "42", BLERead | BLENotify);
-  accXDescr = new BLEDescriptor ("2901", "Acc X");
-  accYChar = new BLEFloatCharacteristic(UUID_PREFIX "43", BLERead | BLENotify);
-  accYDescr = new BLEDescriptor ("2901", "Acc Y");
-  accZChar = new BLEFloatCharacteristic(UUID_PREFIX "44", BLERead | BLENotify);
-  accZDescr = new BLEDescriptor ("2901", "Acc Z");
-  accChar[0] = accXChar;
-  accChar[1] = accYChar;
-  accChar[2] = accZChar;
-  accDescr[0] = accXDescr;
-  accDescr[1] = accYDescr;
-  accDescr[2] = accZDescr;
-  accService->addCharacteristic(*accStringChar);
-  accStringChar->addDescriptor(*accStringDescr);
-  accStringChar->writeValue(" xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
-  for (int i = 0; i <= 2; i++) {
-    accService->addCharacteristic(*accChar[i]);
-    accChar[i]->addDescriptor(*accDescr[i]);
-    accChar[i]->writeValue(0.);
-  }
+  // accService = new BLEService(UUID_PREFIX "40");
+  // accStringChar = new BLECharacteristic(UUID_PREFIX "41", BLERead | BLENotify, " xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
+  // accStringDescr = new BLEDescriptor ("2901", "Acc X,Y,Z");
+  // accXChar = new BLEFloatCharacteristic(UUID_PREFIX "42", BLERead | BLENotify);
+  // accXDescr = new BLEDescriptor ("2901", "Acc X");
+  // accYChar = new BLEFloatCharacteristic(UUID_PREFIX "43", BLERead | BLENotify);
+  // accYDescr = new BLEDescriptor ("2901", "Acc Y");
+  // accZChar = new BLEFloatCharacteristic(UUID_PREFIX "44", BLERead | BLENotify);
+  // accZDescr = new BLEDescriptor ("2901", "Acc Z");
+  // accChar[0] = accXChar;
+  // accChar[1] = accYChar;
+  // accChar[2] = accZChar;
+  // accDescr[0] = accXDescr;
+  // accDescr[1] = accYDescr;
+  // accDescr[2] = accZDescr;
+  // accService->addCharacteristic(*accStringChar);
+  // accStringChar->addDescriptor(*accStringDescr);
+  // accStringChar->writeValue(" xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
+  // for (int i = 0; i <= 2; i++) {
+  //   accService->addCharacteristic(*accChar[i]);
+  //   accChar[i]->addDescriptor(*accDescr[i]);
+  //   accChar[i]->writeValue(0.);
+  // }
 
 
   aliveService = new BLEService(UUID_PREFIX "50");
@@ -227,11 +226,11 @@ void initBLEPeripheral() {
   commandService->addCharacteristic(*rfCmdChar);
   rfCmdChar->addDescriptor(*rfCmdDescr);
   rfCmdChar->writeValue(0);
-  //trackChar = new BLEBoolCharacteristic (UUID_PREFIX "72", BLERead | BLEWrite | BLENotify);
-  //trackDescr = new BLEDescriptor ("2901", "Enable tracking");
-  //commandService->addCharacteristic(*trackChar);
-  //trackChar->addDescriptor(*trackDescr);
-  //trackChar->writeValue(0);
+  // trackChar = new BLEBoolCharacteristic (UUID_PREFIX "72", BLERead | BLEWrite | BLENotify);
+  // trackDescr = new BLEDescriptor ("2901", "Enable tracking");
+  // commandService->addCharacteristic(*trackChar);
+  // trackChar->addDescriptor(*trackDescr);
+  // trackChar->writeValue(0);
   targetHeadingChar = new BLEFloatCharacteristic (UUID_PREFIX "73", BLERead | BLEWrite | BLENotify);
   targetHeadingDescr = new BLEDescriptor ("2901", "Heading target in deg");
   commandService->addCharacteristic(*targetHeadingChar);
@@ -246,7 +245,7 @@ void initBLEPeripheral() {
   BLE.addService(*switchService);
   BLE.addService(*stateService);
   BLE.addService(*magService);
-  BLE.addService(*accService);
+  // BLE.addService(*accService);
   BLE.addService(*aliveService);
   BLE.addService(*stService);
   BLE.addService(*commandService);
@@ -254,11 +253,11 @@ void initBLEPeripheral() {
   BLE.setEventHandler(BLEConnected, blePeripheralConnectHandler);
   BLE.setEventHandler(BLEDisconnected, blePeripheralDisconnectHandler);
   aliveChar->setEventHandler(BLERead, connectionAliveHandler);
-  magRawStringChar->setEventHandler(BLERead, magReadHandler);
-  magRawXChar->setEventHandler(BLERead, magReadHandler);
-  magRawYChar->setEventHandler(BLERead, magReadHandler);
-  magRawZChar->setEventHandler(BLERead, magReadHandler);
-  headRawChar->setEventHandler(BLERead, magReadHandler);
+  // magRawStringChar->setEventHandler(BLERead, magReadHandler);
+  // magRawXChar->setEventHandler(BLERead, magReadHandler);
+  // magRawYChar->setEventHandler(BLERead, magReadHandler);
+  // magRawZChar->setEventHandler(BLERead, magReadHandler);
+  // headRawChar->setEventHandler(BLERead, magReadHandler);
   //rfCmdChar->setEventHandler(BLEWrite, rfCmdHandler);
 
   BLE.advertise();
@@ -289,7 +288,8 @@ void disconnectBLE() {
   remote.disconnect();
   log_w("Rebooting");
   delay(0.1);
-  system_reset();
+  // system_reset();
+  NVIC_SystemReset();
 }
 
 
@@ -307,30 +307,32 @@ void writeMagRaw(float mag_raw[]) {
 
 
 // update Mag Filt characteristic
-void writeMagFilt(float mag_filt[]) {
+void writeMagFilt(float mag_smooth[]) {
   char buf[32];
-  snprintf(buf, 32, "%6.3f,%6.3f,%6.3f", mag_filt[0], mag_filt[1], mag_filt[2]);
+  snprintf(buf, 32, "%6.3f,%6.3f,%6.3f", mag_smooth[0], mag_smooth[1], mag_smooth[2]);
   magFiltStringChar->writeValue(buf);
   for (int i = 0; i < 3; i++) {
-    magFiltChar[i]->writeValue(mag_filt[i]);
+    magFiltChar[i]->writeValue(mag_smooth[i]);
   }
+}
 
-  headFiltChar->writeValue(heading_smooth);
-  snprintf(buf, 32, "%8.5f", heading_smooth);
+void writeHeading(float heading){
+  char buf[32];
+  headFiltChar->writeValue(heading);
+  snprintf(buf, 32, "%8.5f", heading);
   headStrChar->writeValue(buf);
 }
 
-
-// update Acc characteristic
-void writeAcc(float acc[]) {
-  char buf[32];
-  snprintf(buf, 32, "%6.3f,%6.3f,%6.3f", acc[0], acc[1], acc[2]);
-  accStringChar->writeValue(buf);
-  for (int i = 0; i < 3; i++) {
-    accChar[i]->writeValue(acc[i]);
-  }
-  //log_d("Acc: %s", buf);
-}
+// // update Acc characteristic
+// void writeAcc(float acc[]) {
+//   char buf[32];
+//   snprintf(buf, 32, "%6.3f,%6.3f,%6.3f", acc[0], acc[1], acc[2]);
+//   accStringChar->writeValue(buf);
+//   for (int i = 0; i < 3; i++) {
+//     accChar[i]->writeValue(acc[i]);
+//   }
+//   //log_d("Acc: %s", buf);
+// }
 
 // update State characteristic
 void writeState(enum states val) {
@@ -440,211 +442,211 @@ void connectionAliveHandler(BLEDevice central, BLECharacteristic characteristic)
 
 
 
-//   ------------------------------------
-//   ---   Central public functions   ---
-//   ------------------------------------
+// //   ------------------------------------
+// //   ---   Central public functions   ---
+// //   ------------------------------------
 
 
-// Prepare BLE central
-void initBLECentral() {
-  if (!BLE.begin()) {
-    Serial.println("starting BLE failed!");
-    while (1);
-  }
+// // Prepare BLE central
+// void initBLECentral() {
+//   if (!BLE.begin()) {
+//     Serial.println("starting BLE failed!");
+//     while (1);
+//   }
 
-  BLE.scanForName("Cupola");
-  log_i("Scanning ...");
-}
-
-
-// Scan for BLE peripheral and connect, return true if succesful
-bool connectBLECentral() {
-  remote = BLE.available();
-  if (remote) {
-    log_i("Found");
-    BLE.stopScan();
-
-    // connect to the peripheral
-    if (remote.connect()) {
-      log_i("Connected");
-    } else {
-      log_e("Failed to connect!");
-      return false;
-    }
-
-    //log_d("Discovering attributes ...");
-    if (remote.discoverAttributes()) {
-      //log_d("Attributes discovered");
-    } else {
-      log_e("Attribute discovery failed!");
-      disconnectBLE();
-      return false;
-    }
-
-    // BLE Characteristic
-    batteryLevelChar = findCharacteristic(UUID_PREFIX "01");
-    switchChar[0] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "11");
-    switchChar[1] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "12");
-    switchChar[2] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "13");
-    switchChar[3] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "14");
-    switchChar[4] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "15");
-    stateChar = (BLEByteCharacteristic*)findCharacteristic(UUID_PREFIX "21");
-    magRawStringChar = findCharacteristic(UUID_PREFIX "31");
-    magRawXChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "32");
-    magRawYChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "33");
-    magRawZChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "34");
-    magRawChar[0] = magRawXChar;
-    magRawChar[1] = magRawYChar;
-    magRawChar[2] = magRawZChar;
-    magFiltStringChar = findCharacteristic(UUID_PREFIX "35");
-    magFiltXChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "36");
-    magFiltYChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "37");
-    magFiltZChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "38");
-    magFiltChar[0] = magFiltXChar;
-    magFiltChar[1] = magFiltYChar;
-    magFiltChar[2] = magFiltZChar;
-    accStringChar = findCharacteristic(UUID_PREFIX "41");
-    accXChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "42");
-    accYChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "43");
-    accZChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "44");
-    accChar[0] = accXChar;
-    accChar[1] = accYChar;
-    accChar[2] = accZChar;
-    aliveChar = (BLELongCharacteristic*)findCharacteristic(UUID_PREFIX "51");
-
-    if (
-      batteryLevelChar &&
-      switchChar[0] && switchChar[1] && switchChar[2] && switchChar[3] && switchChar[4] &&
-      stateChar &&
-      magRawStringChar && magRawXChar && magRawYChar && magRawZChar && magFiltStringChar && magFiltXChar && magFiltYChar && magFiltZChar &&
-      accStringChar && accXChar && accYChar && accZChar &&
-      aliveChar ) {
-      //log_d("Characteristics OK");
-    } else {
-      log_e("Problem with haracteristics");
-      disconnectBLE();
-      return false;
-    }
-
-    if (!switchChar[0]->subscribe()) {
-      log_e("Cannot subscribe to switchChar");
-      disconnectBLE();
-      return false;
-    }
-    //    switchChar[0]->setEventHandler(BLEWritten, btnChangedHandler);
-    aliveChar->read();
-    aliveChar->writeValue(CONNECTION_KEEPALIVE_TIMEOUT2);
-    connectionLastAlive = millis();
-    log_i("Connected");
-    connected_central = true;
-    return true;
-  }
-  //log_w("not found");
-  return false;
-}
+//   BLE.scanForName("Cupola");
+//   log_i("Scanning ...");
+// }
 
 
-// Disconnect, working both for peripheral and central, implemented above
-// void disconnectBLE();
+// // Scan for BLE peripheral and connect, return true if succesful
+// bool connectBLECentral() {
+//   remote = BLE.available();
+//   if (remote) {
+//     log_i("Found");
+//     BLE.stopScan();
+
+//     // connect to the peripheral
+//     if (remote.connect()) {
+//       log_i("Connected");
+//     } else {
+//       log_e("Failed to connect!");
+//       return false;
+//     }
+
+//     //log_d("Discovering attributes ...");
+//     if (remote.discoverAttributes()) {
+//       //log_d("Attributes discovered");
+//     } else {
+//       log_e("Attribute discovery failed!");
+//       disconnectBLE();
+//       return false;
+//     }
+
+//     // BLE Characteristic
+//     batteryLevelChar = findCharacteristic(UUID_PREFIX "01");
+//     switchChar[0] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "11");
+//     switchChar[1] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "12");
+//     switchChar[2] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "13");
+//     switchChar[3] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "14");
+//     switchChar[4] = (BLEBoolCharacteristic*)findCharacteristic(UUID_PREFIX "15");
+//     stateChar = (BLEByteCharacteristic*)findCharacteristic(UUID_PREFIX "21");
+//     magRawStringChar = findCharacteristic(UUID_PREFIX "31");
+//     magRawXChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "32");
+//     magRawYChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "33");
+//     magRawZChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "34");
+//     magRawChar[0] = magRawXChar;
+//     magRawChar[1] = magRawYChar;
+//     magRawChar[2] = magRawZChar;
+//     magFiltStringChar = findCharacteristic(UUID_PREFIX "35");
+//     magFiltXChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "36");
+//     magFiltYChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "37");
+//     magFiltZChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "38");
+//     magFiltChar[0] = magFiltXChar;
+//     magFiltChar[1] = magFiltYChar;
+//     magFiltChar[2] = magFiltZChar;
+//     accStringChar = findCharacteristic(UUID_PREFIX "41");
+//     accXChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "42");
+//     accYChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "43");
+//     accZChar = (BLEFloatCharacteristic*)findCharacteristic(UUID_PREFIX "44");
+//     accChar[0] = accXChar;
+//     accChar[1] = accYChar;
+//     accChar[2] = accZChar;
+//     aliveChar = (BLELongCharacteristic*)findCharacteristic(UUID_PREFIX "51");
+
+//     if (
+//       batteryLevelChar &&
+//       switchChar[0] && switchChar[1] && switchChar[2] && switchChar[3] && switchChar[4] &&
+//       stateChar &&
+//       magRawStringChar && magRawXChar && magRawYChar && magRawZChar && magFiltStringChar && magFiltXChar && magFiltYChar && magFiltZChar &&
+//       accStringChar && accXChar && accYChar && accZChar &&
+//       aliveChar ) {
+//       //log_d("Characteristics OK");
+//     } else {
+//       log_e("Problem with haracteristics");
+//       disconnectBLE();
+//       return false;
+//     }
+
+//     if (!switchChar[0]->subscribe()) {
+//       log_e("Cannot subscribe to switchChar");
+//       disconnectBLE();
+//       return false;
+//     }
+//     //    switchChar[0]->setEventHandler(BLEWritten, btnChangedHandler);
+//     aliveChar->read();
+//     aliveChar->writeValue(CONNECTION_KEEPALIVE_TIMEOUT2);
+//     connectionLastAlive = millis();
+//     log_i("Connected");
+//     connected_central = true;
+//     return true;
+//   }
+//   //log_w("not found");
+//   return false;
+// }
 
 
-// Read Mag Raw on the remote device
-void readRemoteMagRaw(float res[]) {
-  for (int i = 0; i < 3; i++) {
-    float tmp;
-    magRawChar[i]->readValue(&tmp, 4);
-    //printg("magFiltChar[%d]=%f=%0h",i,tmp,tmp);
-    res[i] = tmp;
-  }
-}
+// // Disconnect, working both for peripheral and central, implemented above
+// // void disconnectBLE();
 
 
-// Read Mag Filt on the remote device
-void readRemoteMagFilt(float res[]) {
-  for (int i = 0; i < 3; i++) {
-    float tmp;
-    magFiltChar[i]->readValue(&tmp, 4);
-    res[i] = tmp;
-  }
-}
+// // Read Mag Raw on the remote device
+// void readRemoteMagRaw(float res[]) {
+//   for (int i = 0; i < 3; i++) {
+//     float tmp;
+//     magRawChar[i]->readValue(&tmp, 4);
+//     //printg("magFiltChar[%d]=%f=%0h",i,tmp,tmp);
+//     res[i] = tmp;
+//   }
+// }
 
 
-// Read Acc on the remote device
-void readRemoteAcc(float res[])  {
-  for (int i = 0; i < 3; i++) {
-    float tmp;
-    accChar[i]->readValue(&tmp, 4);
-    res[i] = tmp;
-  }
-}
+// // Read Mag Filt on the remote device
+// void readRemoteMagFilt(float res[]) {
+//   for (int i = 0; i < 3; i++) {
+//     float tmp;
+//     magFiltChar[i]->readValue(&tmp, 4);
+//     res[i] = tmp;
+//   }
+// }
 
 
-
-// set the state on the remote device
-void setRemoteState(enum states state) {
-  stateChar->writeValue((uint8_t)state);
-}
-
-// return true if the connection is alive, ignore timeout if debug is true
-bool connectedCentral() {
-  if (!BLE.connected()) {
-    //log_e("connection dead: not connected");
-    connected_central = false;
-    return false;
-  }
-  //printg("isAlive(): millis=%ld connectionLastAlive=%ld\n\r", millis(), connectionLastAlive);
-  if (millis() - connectionLastAlive > CONNECTION_KEEPALIVE_TIMEOUT) {
-
-    if (aliveChar->read()) {
-      //printg("  update OK\n\r");
-      connectionLastAlive = millis();
-      return true;
-    } else {
-      log_e("connection dead: update faillure");
-      connected_central = false;
-      return false;
-    }
-  } else {
-    //printg("  OK\n\r");
-    return true;
-  }
-}
-
-// return state of the remote btn
-bool remoteBtn() {
-  if (connected_central) {
-    return switchChar[0]->value();
-  }
-  return false;
-}
+// // Read Acc on the remote device
+// void readRemoteAcc(float res[])  {
+//   for (int i = 0; i < 3; i++) {
+//     float tmp;
+//     accChar[i]->readValue(&tmp, 4);
+//     res[i] = tmp;
+//   }
+// }
 
 
 
-//   ----------------------------
-//   ---   Central handlers   ---
-//   ----------------------------
+// // set the state on the remote device
+// void setRemoteState(enum states state) {
+//   stateChar->writeValue((uint8_t)state);
+// }
+
+// // return true if the connection is alive, ignore timeout if debug is true
+// bool connectedCentral() {
+//   if (!BLE.connected()) {
+//     //log_e("connection dead: not connected");
+//     connected_central = false;
+//     return false;
+//   }
+//   //printg("isAlive(): millis=%ld connectionLastAlive=%ld\n\r", millis(), connectionLastAlive);
+//   if (millis() - connectionLastAlive > CONNECTION_KEEPALIVE_TIMEOUT) {
+
+//     if (aliveChar->read()) {
+//       //printg("  update OK\n\r");
+//       connectionLastAlive = millis();
+//       return true;
+//     } else {
+//       log_e("connection dead: update faillure");
+//       connected_central = false;
+//       return false;
+//     }
+//   } else {
+//     //printg("  OK\n\r");
+//     return true;
+//   }
+// }
+
+// // return state of the remote btn
+// bool remoteBtn() {
+//   if (connected_central) {
+//     return switchChar[0]->value();
+//   }
+//   return false;
+// }
 
 
-// implemented in cupola.cpp, called if a switch is changed on the peripheral
-//void btnChangedHandler(BLEDevice central, BLECharacteristic characteristic);
+
+// //   ----------------------------
+// //   ---   Central handlers   ---
+// //   ----------------------------
+
+
+// // implemented in cupola.cpp, called if a switch is changed on the peripheral
+// //void btnChangedHandler(BLEDevice central, BLECharacteristic characteristic);
 
 
 
 
 
 
-//   -------------------------------------
-//   ---   Private functions   ---
-//   -------------------------------------
+// //   -------------------------------------
+// //   ---   Private functions   ---
+// //   -------------------------------------
 
 
-// return the characteristic that correspond to the uuid
-BLECharacteristic* findCharacteristic(const char * uuid) {
-  BLECharacteristic ret;
-  ret = remote.characteristic(uuid);
-  if (!ret) {
-    log_e("unable to find characteristic %s", uuid);
-  }
-  return new BLECharacteristic(ret);
+// // return the characteristic that correspond to the uuid
+// BLECharacteristic* findCharacteristic(const char * uuid) {
+//   BLECharacteristic ret;
+//   ret = remote.characteristic(uuid);
+//   if (!ret) {
+//     log_e("unable to find characteristic %s", uuid);
+//   }
+//   return new BLECharacteristic(ret);
 
-}
+// }
