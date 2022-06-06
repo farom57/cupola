@@ -13,8 +13,8 @@
 #define K_SMOOTH 0.2
 #define MAG_CHANGE_THRESHOLD 0.5
 
-#define CALIB_SAMPLES 60
-#define CALIB_SUB_SAMPLES 5
+#define CALIB_SAMPLES 120
+#define CALIB_SUB_SAMPLES 10
 #define CALIB_DELAY 1000
 
 #define DEG(a)  a*360./2./PI

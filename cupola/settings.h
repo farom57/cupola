@@ -39,8 +39,8 @@
 #define HEADING_THRESHOLD 3.
 #define MOVING_SPEED 3. //deg/s
 #define MOVING_NOISE 1.5 //deg/s, standard deviation of process noise when moving
-#define REST_NOISE 0.5 //deg/s, standard deviation of process noise when static
-#define MEASUREMENT_NOISE 1. //deg, standard deviation of measurement
+#define REST_NOISE 0.1 //deg/s, standard deviation of process noise when static
+#define MEASUREMENT_NOISE 0.86 //deg, standard deviation of measurement
 
 enum setting_type { INT, FLOAT, FLOAT3, FLOAT9};
 

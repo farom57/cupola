@@ -32,6 +32,7 @@ void start_rf() {
   rf_command = NONE;
   pos = 0;
   rf_started = true;
+
 }
 void stop_rf() {
   if(!rf_started){
@@ -42,6 +43,7 @@ void stop_rf() {
   rf_command = NONE;
   digitalWrite(PIN_TX_DATA, LOW);
   rf_started = false;
+
 }
 
 void flip() {

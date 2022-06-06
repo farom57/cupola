@@ -311,20 +311,29 @@ void updateHeading(){
   //float heading_smooth; // heading estimation (x_k-1|k-1 and x_k|k)
   //long last_heading=-1; // last heading update date
   static float P=0.; // variance (P_k-1|k-1 or P_k|k)
+  static bool spurious_ignored=false;
   float dt;
   float heading_predicted; //x_k|k-1
   float P_predicted; //P_k|k-1
   float u, u_noise,z,y,S,K;
+  float heading_raw;
+  heading_raw=heading(mag_raw);
 
+  long now = millis();
   if(last_heading<0){// initialisation
-    heading_smooth=DEG(heading(mag_raw));
+    heading_smooth=heading_raw;
     P=MEASUREMENT_NOISE*MEASUREMENT_NOISE;
     last_heading=millis();
     return;
   }
-
-  dt=(float)(millis()-last_heading)*0.001;
-  last_heading=millis();
+  
+  dt=(float)(now-last_heading)*0.001;
+  //log_d("%f %d",dt,now,last_heading);
+  
+  
+  float diff=heading_raw-heading_smooth;
+  if(diff>180) diff-=360;
+  if(diff<-180) diff-=360;
 
   if(rf_command==RIGHT){
     u=MOVING_SPEED;
@@ -332,11 +341,20 @@ void updateHeading(){
   }else if(rf_command==LEFT){
     u=-MOVING_SPEED;
     u_noise=MOVING_NOISE*MOVING_NOISE;
+  }else if(abs(diff)>MEASUREMENT_NOISE*3.){
+    if(!spurious_ignored){
+      spurious_ignored=true;
+      //log_("%f\t%f\t%f\t%f\t%f",heading_raw, heading_smooth, -1., sqrt(P),0.);
+      return;
+    }
+    u=0;
+    u_noise=MOVING_SPEED*MOVING_SPEED;    
   }else{
     u=0;
     u_noise=REST_NOISE*REST_NOISE;
   }
-
+  spurious_ignored=false;
+  last_heading=now;
 
   // prediction: 
   //   state:    x_k|k-1 = x_k-1|k-1 + u(t_k)*(t_k-t_k-1)
@@ -346,7 +364,7 @@ void updateHeading(){
 
   // update:
   //   innovation y_k = z_k - x_k|k-1
-  z=DEG(heading(mag_raw));
+  z=heading_raw;
   y=z-heading_predicted;
   if(y>180.) y-=360.;
   if(y<-180.) y+=360.;
@@ -360,6 +378,9 @@ void updateHeading(){
   if(heading_smooth<0.) heading_smooth+=360.;
   //   updated state variance P_k|k = (1-K)*P_k|k-1
   P=P_predicted*(1.-K);
+
+  writeHeading(heading_smooth);
+  //log_("%f\t%f\t%f\t%f\t%f",heading_raw, heading_smooth, sqrt(u_noise), sqrt(P),dt);
 
 }
 
@@ -549,7 +570,7 @@ void compassCalibCalc() {
   st_compass_heading_bias = 0;
   float initial_sample[3] = {sample_mag_raw[0][0], sample_mag_raw[1][0], sample_mag_raw[2][0]};
   st_compass_heading_bias = -heading(initial_sample);
-  log_d("Heading bias:\t%f", DEG(st_compass_heading_bias));
+  log_d("Heading bias:\t%f", st_compass_heading_bias);
 
   float err_min=+INFINITY;
   float err_max=-INFINITY;
@@ -565,7 +586,10 @@ void compassCalibCalc() {
     compassCalib(raw,calibrated);
     hor_mag=sqrt(calibrated[0]*calibrated[0]+calibrated[1]*calibrated[1]);
     printg("%d\t|\t%f\t%f\t%f\t|",i,raw[0],raw[1],raw[2]);
-    printg("\t%f\t%f\t%f\t|\t%f\t|\t%f\n",calibrated[0],calibrated[1],calibrated[2],hor_mag,(atan2(calibrated[1], calibrated[0]) + st_compass_heading_bias)*360./2./PI);
+    float hd = DEG(atan2(calibrated[1], calibrated[0])) + st_compass_heading_bias;
+    if(hd>360) hd+=360;
+    if(hd<0) hd-=360;
+    printg("\t%f\t%f\t%f\t|\t%f\t|\t%f\n",calibrated[0],calibrated[1],calibrated[2],hor_mag,hd);
     avg+=hor_mag;
     err_min=min(err_min,hor_mag-1);
     err_max=max(err_max,hor_mag-1);
@@ -588,11 +612,9 @@ void compassCalibCalc() {
 float heading(float in[]) {
   float calibrated[3];
   compassCalib(in, calibrated);
-  float res = atan2(calibrated[1], calibrated[0]) + st_compass_heading_bias;
-  if (res > PI)
-    res = res - 2.*PI;
-  if (res < -PI)
-    res = res + 2.*PI;
+  float res = DEG(atan2(calibrated[1], calibrated[0])) + st_compass_heading_bias;
+  if(res>360) res-=360;
+  if(res<0) res+=360;
   return res;
 }
 
@@ -819,8 +841,8 @@ void compassCalib(float in[], float res[]) {
 //     //[ha_rot,dec_rot]=mountRot(sample_mag_cal,sample_acc_cal,lat,m_theo,sigma_mag,sigma_acc);
 //     mountRot((const float*)sample_mag_cal, (const float*)sample_acc_cal,  RAD(st_lat), m_theo, sigma_mag, sigma_acc, ha_rot, dec_rot, CALIB_SAMPLES);
 
-//     //ha_max_error=max(abs(ha_rot-angles(2,:)))*360/2/pi
-//     //dec_max_error=max(abs(dec_rot-angles(3,:)))*360/2/pi
+//     //ha_max_error=max(abs(ha_rot-angles(2,:)))
+//     //dec_max_error=max(abs(dec_rot-angles(3,:)))
 //     //angles=[angles(1,:);ha_rot;dec_rot];
 //     ha_max_error = 0;
 //     dec_max_error = 0;

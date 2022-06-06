@@ -27,6 +27,7 @@ void setup() {
 
   if (switch_1()) {
     operating_mode = DEBUG;
+    ledRGB(true, false, false);
     while (!btn()) {}
     if (switch_1() && !switch_2() && switch_3() && !switch_4()) {
       ledRGB(true, true, true);
@@ -40,7 +41,7 @@ void setup() {
   }
 
 
-  ledRYG(true, false, false);
+  ledRYG(false, false, false);
   Serial.begin(57600);
 
   loadSt();
@@ -225,29 +226,30 @@ void loop() {
     //updateAcc();
     updateHeading();
     
-    float mag_calib[3];
-    compassCalib(mag_raw, mag_calib);
-    float head = heading_smooth;
-    float target = readTarget();
-    float diff = target-head;
-    if(diff>180.) diff-=360.;
-    if(diff<-180.) diff+=360.;
-    //log_("%fdeg\t%f\t%f\t%f\t%f", head, mag_calib[0], mag_calib[1], mag_calib[2], norm(mag_calib));
-    log_("%f %f %f",head,target,diff);
-    if(rf_command==NONE){
-      if(diff>HEADING_THRESHOLD){
-        set_rf_cmd(RIGHT);
-      }else if(diff<-HEADING_THRESHOLD){
-        set_rf_cmd(LEFT);
-      }
-    }else if((rf_command==RIGHT && diff<0) || (rf_command==LEFT && diff>0)){
-      set_rf_cmd(NONE);
-    }
+
+
+//    float head = heading_smooth;
+//    float target = readTarget();
+//    float diff = target-head;
+//    if(diff>180.) diff-=360.;
+//    if(diff<-180.) diff+=360.;
+//
+//
+//    if(rf_command==NONE){
+//      if(diff>HEADING_THRESHOLD){
+//        set_rf_cmd(RIGHT);
+//      }else if(diff<-HEADING_THRESHOLD){
+//        set_rf_cmd(LEFT);
+//      }
+//    }else if((rf_command==RIGHT && diff<0) || (rf_command==LEFT && diff>0)){
+//      set_rf_cmd(NONE);
+//    }
 
     ledRGB(rf_command&0b100,rf_command&0b010,rf_command&0b001);
-    
-    
+        
   }
+
+  
   if (state == CALIB) {
     ledRYG(false, true, true);
     ledRGB(false, false, true);
@@ -267,18 +269,21 @@ void loop() {
   if (state == LOG_SENSOR) {
     ledRYG(false, true, true);
     ledRGB(false, false, true);
-    if(sampleCalib()){
-      ledRGB(true, true, true);
-      current_calib_sample=0;
-      float mag_cal[3],mag[3];
-      mag[0]=sample_mag_raw[0][0];
-      mag[1]=sample_mag_raw[1][0];
-      mag[2]=sample_mag_raw[2][0];
-      compassCalib(mag_raw,mag_cal);
-      //log_d("%i\t%f\t%f\t%f\t%f\t%f\t%f\t", current_calib_sample, mag_raw[0], mag_raw[1], mag_raw[2], acc_filt[0], acc_filt[1], acc_filt[2]);
-      //log_d("%7.3f %7.3f %7.3f %7.5f %7.5f %7.5f %7.2f %7.2f",mag[0], mag[1], mag[2],mag_cal[0],mag_cal[1],mag_cal[2],heading(mag_raw)*180./3.14159,heading(mag_smooth)*180./3.14159);
-      log_d("%f %f %f %f",mag_cal[0],mag_cal[1],mag_cal[2],heading(mag_raw)*180./3.14159);
-    }
+    // if(sampleCalib()){
+    //   ledRGB(true, true, true);
+    //   current_calib_sample=0;
+    //   float mag_cal[3],mag[3];
+    //   mag[0]=sample_mag_raw[0][0];
+    //   mag[1]=sample_mag_raw[1][0];
+    //   mag[2]=sample_mag_raw[2][0];
+    //   compassCalib(mag_raw,mag_cal);
+    //   //log_d("%i\t%f\t%f\t%f\t%f\t%f\t%f\t", current_calib_sample, mag_raw[0], mag_raw[1], mag_raw[2], acc_filt[0], acc_filt[1], acc_filt[2]);
+    //   //log_d("%7.3f %7.3f %7.3f %7.5f %7.5f %7.5f %7.2f %7.2f",mag[0], mag[1], mag[2],mag_cal[0],mag_cal[1],mag_cal[2],heading(mag_raw)*180./3.14159,heading(mag_smooth)*180./3.14159);
+    //   log_d("%f %f %f %f",mag_cal[0],mag_cal[1],mag_cal[2],heading(mag_raw)*180./3.14159);
+    // }
+    updateSwitches();
+    updateMag();
+    updateHeading();
   }
 
 
@@ -494,12 +499,12 @@ void loop() {
 
 // }
 
-// // called if manual rf command changed
-// void rfCmdHandler(BLEDevice central, BLECharacteristic characteristic){
-//   const enum rf_commands cmd = (enum rf_commands)(*characteristic.value());
-//   log_i("received rf command by BLE: %i",(byte)cmd);
-//   set_rf_cmd(cmd);
-// }
+ // called if manual rf command changed
+ void rfCmdHandler(BLEDevice central, BLECharacteristic characteristic){
+   const enum rf_commands cmd = (enum rf_commands)(*characteristic.value());
+   log_i("received rf command by BLE: %i",(byte)cmd);
+   set_rf_cmd(cmd);
+ }
 
 
 // Mount

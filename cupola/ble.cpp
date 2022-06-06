@@ -112,7 +112,7 @@ void initBLEPeripheral() {
   stateChar->writeValue(state);
 
   magService = new BLEService(UUID_PREFIX "30");
-  magRawStringChar = new BLECharacteristic(UUID_PREFIX "31", BLERead, " xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
+  magRawStringChar = new BLECharacteristic(UUID_PREFIX "31", BLERead | BLENotify, " xxx.xxxxx, yyy.yyyyy, zzz.zzzzz");
   magRawStringDescr = new BLEDescriptor ("2901", "Mag raw X,Y,Z");
   magRawXChar = new BLEFloatCharacteristic(UUID_PREFIX "32", BLERead | BLENotify);
   magRawXDescr = new BLEDescriptor ("2901", "Mag raw X");
@@ -239,15 +239,15 @@ void initBLEPeripheral() {
 
 
   BLE.setLocalName("Cupola");
-  BLE.setAdvertisedService(*batteryService);
+  //BLE.setAdvertisedService(*batteryService);
 
-  BLE.addService(*batteryService);
-  BLE.addService(*switchService);
+  //BLE.addService(*batteryService);
+  //BLE.addService(*switchService);
   BLE.addService(*stateService);
   BLE.addService(*magService);
   // BLE.addService(*accService);
   BLE.addService(*aliveService);
-  BLE.addService(*stService);
+  //BLE.addService(*stService);
   BLE.addService(*commandService);
 
   BLE.setEventHandler(BLEConnected, blePeripheralConnectHandler);
@@ -258,7 +258,7 @@ void initBLEPeripheral() {
   // magRawYChar->setEventHandler(BLERead, magReadHandler);
   // magRawZChar->setEventHandler(BLERead, magReadHandler);
   // headRawChar->setEventHandler(BLERead, magReadHandler);
-  //rfCmdChar->setEventHandler(BLEWrite, rfCmdHandler);
+  rfCmdChar->setEventHandler(BLEWrite, rfCmdHandler);
 
   BLE.advertise();
 
@@ -301,7 +301,7 @@ void writeMagRaw(float mag_raw[]) {
   for (int i = 0; i < 3; i++) {
     magRawChar[i]->writeValue(mag_raw[i]);
   }
-  headRawChar->writeValue(heading(mag_raw)*360/2./PI);
+  headRawChar->writeValue(heading(mag_raw));
 
 }
 
@@ -355,7 +355,6 @@ enum rf_commands readRfCmd() {
 }
 
 float readTarget(){
-  log_d("%f",targetHeadingChar->value());
   return targetHeadingChar->value();
 }
 
