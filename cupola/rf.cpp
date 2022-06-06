@@ -1,9 +1,12 @@
 #include "rf.h"
-#include "settings.h"
 #include "utility.h"
 #include "ble.h"
 #include "io.h"
 #include "mbed.h"
+
+using namespace std::chrono;
+
+
 
 enum rf_commands rf_command;
 bool  rf_started = false;
@@ -28,7 +31,7 @@ void start_rf() {
     log_w("rf already started");
     return;
   }  
-  flipper.attach(&flip, RF_PERIOD);
+  flipper.attach(&flip, 449us);
   rf_command = NONE;
   pos = 0;
   rf_started = true;

@@ -15,7 +15,7 @@
 // HORN:   0101010101011100000000000
 
 
-#define RF_PERIOD 0.0004489
+
 
 enum rf_commands {NONE, UP, DOWN, LEFT, RIGHT, SQUARE, HORN};
 extern enum rf_commands rf_command;

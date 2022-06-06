@@ -58,3 +58,15 @@ void printg(const char *fmt, ... ) {
   va_end (args);
   Serial.print(buf);
 }
+
+void v_copy(const float v[], float res[]) {
+  res[0] = v[0];
+  res[1] = v[1];
+  res[2] = v[2];
+}
+
+void v_lincomb(float a, const float u[], float b, const float v[], float res[]) {
+  res[0] = a * u[0] + b * v[0];
+  res[1] = a * u[1] + b * v[1];
+  res[2] = a * u[2] + b * v[2];
+}

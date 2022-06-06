@@ -1,7 +1,10 @@
 #include <Arduino.h>
-#include "settings.h"
 #include "io.h"
 #include "nrf_temp.h"
+
+#define DEBOUNCE_DELAY 50
+
+
 
 bool oldSwitch1;
 bool oldSwitch2;
@@ -178,9 +181,6 @@ bool btn_chg() {
   return false;
 }
 
-bool tempAvailable() {
-
-}
 float readTemp() {
   //nrf_temp_init();
   //delay(1);

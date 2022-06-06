@@ -4,24 +4,16 @@
 
 
 // Global variables
-enum states {ERR, INIT, SLEEP, CONNECTION, STANDBY, ON, CALIB, LOG_SENSOR};
+enum states {INIT, SLEEP, CONNECTION, STANDBY};
 extern enum states state;
-enum operating_modes {TBD, CUPOLA, MOUNT, DEBUG};
-extern enum operating_modes operating_mode;
-
-
-
+extern boolean debug_mode;
 
 
 void setup();
 void loop();
-void loop_debug();
-void loop_mount();
-void loop_cupola();
+
 
 // defined in ble.h but implemented in cupola.cpp:
-//   void modeChangedHandler(BLEDevice central, BLECharacteristic characteristic);
-//   void magReadHandler(BLEDevice central, BLECharacteristic characteristic);
-//   void btnChangedHandler(BLEDevice central, BLECharacteristic characteristic);
+// void rfCmdHandler(BLEDevice central, BLECharacteristic characteristic);           // called if manual rf command changed
 
 #endif
