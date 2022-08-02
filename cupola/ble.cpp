@@ -80,7 +80,14 @@ void initBLEPeripheral() {
   batteryLevelDescr = new BLEDescriptor ("2901", "Battery voltage");
   batteryService->addCharacteristic(*batteryLevelChar);
   batteryLevelChar->addDescriptor(*batteryLevelDescr);
-  // TODO: implement battery service
+  float bat = 0;
+  for(int i=0;i<100; i++){
+    bat+=analogRead(A5)/512./100.;
+  }
+  bat=0.657/(1-1./bat);
+  char buf[32];
+  snprintf(buf, 32, "%6.3f", bat);
+  batteryLevelChar->writeValue(buf);
 
   switchService = new BLEService(UUID_PREFIX "10");
   switchChar[0] = new BLEBoolCharacteristic(UUID_PREFIX "11", BLERead | BLENotify);
@@ -211,7 +218,8 @@ void disconnectBLE() {
   log_w("Rebooting");
   delay(0.1);
   // system_reset();
-  NVIC_SystemReset();
+  // NVIC_SystemReset();
+  shutdown();
 }
 
 
@@ -319,4 +327,5 @@ void blePeripheralDisconnectHandler(BLEDevice central) {
 // called when the keepalive characteristic is changed
 void connectionAliveHandler(BLEDevice central, BLECharacteristic characteristic) {
   connectionLastAlive = millis();
+  log_d("alive %l",connectionLastAlive);
 }

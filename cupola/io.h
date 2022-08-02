@@ -43,5 +43,7 @@ void send_high();
 void pause();
 
 float readTemp();
+void shutdown();
+
 
 #endif

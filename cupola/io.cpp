@@ -220,3 +220,23 @@ void pause(){
   delayMicroseconds(1794);
   delayMicroseconds(1794);
 }
+
+void shutdown(){
+  digitalWrite(LED_PWR, LOW); // turn off power LED
+  digitalWrite(PIN_ENABLE_SENSORS_3V3, LOW); // turn off sensors
+  digitalWrite(PIN_RX_ENABLE, LOW);
+  digitalWrite(LED_BUILTIN, LOW);
+  digitalWrite(PIN_LED1, HIGH);
+  digitalWrite(PIN_LED2, HIGH);
+  digitalWrite(PIN_LED3, HIGH);
+  digitalWrite(LEDR, HIGH);
+  digitalWrite(LEDG, HIGH);
+  digitalWrite(LEDB, HIGH);
+  digitalWrite(PIN_TX_DATA, LOW);
+
+  pinMode(PIN_ENABLE_I2C_PULLUP, INPUT);
+
+  
+  nrf_gpio_cfg_sense_set(31,NRF_GPIO_PIN_SENSE_LOW);
+  NRF_POWER->SYSTEMOFF=1;
+}

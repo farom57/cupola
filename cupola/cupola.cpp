@@ -5,8 +5,10 @@
 #include "rf.h"
 #include "ble.h"
 #include <Arduino.h>
+#include <USB/PluggableUSBSerial.h>
 
 #define LOOP_PERIOD 100
+#define AUTO_SHUTDOWN 600000
 
 
 // Global variables
@@ -14,6 +16,7 @@
 enum states state = INIT;
 boolean debug_mode = false;
 boolean manual_command = false;
+
 
 // LED RGB code:
 // 000 black: no error
@@ -40,6 +43,8 @@ void setup() {
   if (switch_1()) {
     debug_mode = true;
     ledRGB(true, false, false);
+//    PluggableUSBD().begin();
+//    SerialUSB.begin(115200);
     while (!btn()) {}
   }
 
@@ -94,7 +99,8 @@ void loop() {
   if (state == STANDBY && !connectedPeripheral()) {
     stopIMU();
     log_e("Disconnection, System reset");
-    NVIC_SystemReset();    
+    //NVIC_SystemReset();
+    shutdown();  
   }
 
 
@@ -128,6 +134,10 @@ void loop() {
   if (state == CONNECTION) {
     connectBLEPeripheral();
 
+    if(millis()>AUTO_SHUTDOWN && !debug_mode){
+      shutdown(); 
+    }
+
   }
   if (state == STANDBY) {
     updateSwitches();
@@ -136,6 +146,10 @@ void loop() {
   }
 
 
+
+
+  
+  
   delay(LOOP_PERIOD);
 }
 
