@@ -1,6 +1,7 @@
 import time
 import serial
 import serial.tools.list_ports
+import threading  # <-- ajouté
 
 STEPS_PER_TURN = 692
 
@@ -16,27 +17,20 @@ class Cupola(object):
         self.connected = False
         self.ref_azimuth = ref
         self.track_flag = False
+        self.lock = threading.Lock()  # <-- verrou pour protéger l'accès série
 
-    # ---------- Connexion / déconnexion ----------
+    # ---------- Connexion ----------
 
     def connect(self, port=None):
-        """Essaye de se connecter au port série."""
         if port is None:
             ports = serial.tools.list_ports.comports(include_links=False)
             if not ports:
                 print("Aucun port actif")
                 return False
-            if len(ports) > 1:
-                print(f"{len(ports)} ports actifs ont été trouvés :")
-                for p in ports:
-                    print(f"  - {p.device}")
-            else:
-                print("1 port actif a été trouvé :")
-                print(ports[0])
             port = ports[0].device
 
         self.ser.port = port
-        self.ser.timeout = 0.1  # ← augmenté pour lire les trames complètes
+        self.ser.timeout = 0.1
         self.ser.write_timeout = 0.1
 
         try:
@@ -56,21 +50,19 @@ class Cupola(object):
             self.ser.close()
         self.connected = False
 
-    # ---------- Lecture série sécurisée ----------
+    # ---------- Lecture protégée ----------
 
     def _readline_int(self, cmd_name: str):
-        """
-        Lit une ligne depuis le port série, convertit en int si possible.
-        Retourne None si trame invalide.
-        """
-        try:
-            line = self.ser.readline().decode(errors="ignore").strip()
-        except serial.SerialException as e:
-            print(f"[ERREUR SERIE] Lecture échouée ({cmd_name}) : {e}")
-            return None
+        """Lecture protégée et conversion en entier."""
+        with self.lock:  # <-- protection série
+            try:
+                line = self.ser.readline().decode(errors="ignore").strip()
+            except serial.SerialException as e:
+                print(f"[ERREUR SERIE] Lecture échouée ({cmd_name}) : {e}")
+                return None
 
         if not line:
-            print(f"[WARN] Pas de réponse à la commande {cmd_name}")
+            print(f"[WARN] Pas de réponse à {cmd_name}")
             return None
 
         if not line.replace('-', '').isdigit():
@@ -79,18 +71,23 @@ class Cupola(object):
 
         return int(line)
 
-    # ---------- Commandes série ----------
+    def _send(self, data: bytes):
+        """Écriture protégée sur le port série."""
+        with self.lock:
+            try:
+                self.ser.write(data)
+            except serial.SerialException as e:
+                print(f"[ERREUR SERIE] Écriture échouée ({data!r}): {e}")
+                return False
+        return True
+
+    # ---------- Commandes série protégées ----------
 
     def get_step(self):
-        """Demande la position absolue en pas à l’Arduino."""
         if not self.connected:
             return False
-        try:
-            self.ser.write(b's')
-        except serial.SerialException:
-            print("[ERREUR SERIE] Impossible d'envoyer 's'")
+        if not self._send(b's'):
             return False
-
         value = self._readline_int('s')
         if value is not None:
             self.step = value
@@ -98,7 +95,6 @@ class Cupola(object):
         return False
 
     def get_home(self):
-        """Renvoie la valeur du home locale (pas de lecture série ici)."""
         return self.home
 
     def set_home(self):
@@ -106,33 +102,22 @@ class Cupola(object):
         return self.home
 
     def get_track_flag(self):
-        """Lit le flag de suivi depuis l’Arduino."""
         if not self.connected:
             return False
-        try:
-            self.ser.write(b'k')
-        except serial.SerialException:
-            print("[ERREUR SERIE] Impossible d'envoyer 'k'")
+        if not self._send(b'k'):
             return False
-
         value = self._readline_int('k')
         if value is None:
             return False
-
         self.track_flag = (value == 1)
         return self.track_flag
 
     def set_track_flag(self, state):
-        """Modifie le flag de suivi."""
         if not self.connected:
             return False
         cmd = b'k1' if state else b'k0'
-        try:
-            self.ser.write(cmd)
-        except serial.SerialException:
-            print(f"[ERREUR SERIE] Impossible d'envoyer {cmd}")
+        if not self._send(cmd):
             return False
-
         value = self._readline_int('k')
         if value is None:
             return False
@@ -142,17 +127,12 @@ class Cupola(object):
     def get_outputs(self):
         if not self.connected:
             return 0
-        try:
-            self.ser.write(b'p')
-        except serial.SerialException:
-            print("[ERREUR SERIE] Impossible d'envoyer 'p'")
+        if not self._send(b'p'):
             return 0
-
         value = self._readline_int('p')
         return value if value is not None else 0
 
     def get_azimuth(self):
-        """Retourne l’azimut calculé à partir du step actuel."""
         if not self.connected:
             return self.azimuth
         self.get_step()
@@ -161,7 +141,11 @@ class Cupola(object):
         self.azimuth = self.step2azimuth(self.step, self.home, self.ref_azimuth)
         return self.azimuth
 
-    # ---------- Commandes directes coupole ----------
+    # ---------- Commandes simples ----------
+
+    def _send_simple(self, cmd: bytes):
+        if self.connected:
+            self._send(cmd)
 
     def turn_left(self):  self._send_simple(b'l')
     def turn_right(self): self._send_simple(b'r')
@@ -172,34 +156,19 @@ class Cupola(object):
     def light_off(self):   self._send_simple(b'b')
     def stop(self):        self._send_simple(b'x')
 
-    def _send_simple(self, cmd: bytes):
-        if not self.connected:
-            return
-        try:
-            self.ser.write(cmd)
-        except serial.SerialException:
-            print(f"[ERREUR SERIE] Impossible d'envoyer {cmd}")
-
     def goto(self, azimuth):
-        """Commande la coupole vers un azimut donné (en degrés)."""
         if not self.connected:
             return False
-
         self.get_home()
         time.sleep(0.05)
         target = int(self.azimuth2step(azimuth, self.home, self.ref_azimuth))
         cmd = f"t{target}\n".encode()
-
-        try:
-            self.ser.write(cmd)
-        except serial.SerialException:
-            print("[ERREUR SERIE] Impossible d'envoyer goto()")
+        if not self._send(cmd):
             return False
-
         value = self._readline_int(f"t{target}")
         return value if value is not None else False
 
-    # ---------- Conversion pas ↔ azimut ----------
+    # ---------- Conversion ----------
 
     @staticmethod
     def step2azimuth(step, home, ref_azimuth):

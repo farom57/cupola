@@ -25,39 +25,50 @@ port = 'COM6'
 
 def worker():
     global s, pwi4, c, mount_connected, ra, dec, target_az, tol, keep_alive, tracking, outputs, current_az
+    last_goto_time = 0  # ✅ évite d’envoyer goto trop souvent
+    MIN_GOTO_INTERVAL = 3.0  # secondes entre deux ordres
+
     while keep_alive:
-        time.sleep(1)
-
-        if not c.connected:
-            c.connect(port)
-        if c.connected:
-            current_az = c.get_azimuth()
-            time.sleep(0.1)
-            outputs = c.get_outputs()
-            time.sleep(0.1)
-
         try:
-            s = pwi4.status()
-            if not s.mount.is_connected:
+            # --- Lecture coupole ---
+            if not c.connected:
+                c.connect(port)
+            if c.connected:
+                current_az = c.get_azimuth()
+                outputs = c.get_outputs()
+
+            # --- Lecture monture ---
+            try:
+                s = pwi4.status()
+                mount_connected = s.mount.is_connected
+                if mount_connected:
+                    ra = s.mount.ra_apparent_hours
+                    dec = s.mount.dec_apparent_degs
+                    target_az, tol = target_azimuth(pwi4)
+                else:
+                    mount_connected = False
+            except Exception as e:
                 mount_connected = False
+                print(f"[PWI4] Erreur : {e}")
+
+            # --- Asservissement ---
+            if c.connected and mount_connected:
+                tracking = c.get_track_flag()
+                if tracking:
+                    err = (current_az - target_az + 180) % 360 - 180
+                    if abs(err) > tol and (time.time() - last_goto_time) > MIN_GOTO_INTERVAL:
+                        print(f"[Coupole] Correction azimut ({current_az:.1f}° → {target_az:.1f}°)")
+                        c.goto(target_az)
+                        last_goto_time = time.time()
             else:
-                mount_connected = True
-                ra = s.mount.ra_apparent_hours
-                dec = s.mount.dec_apparent_degs
-                target_az, tol = target_azimuth(pwi4)
-        except Exception:
-            mount_connected = False
+                tracking = None
 
-        if c.connected and mount_connected:
-            tracking = c.get_track_flag()
-            time.sleep(0.1)
-            if tracking:
-                err = (current_az - target_az + 180) % 360 - 180
-                if err < -tol or err > tol:
-                    c.goto(target_az)
+            time.sleep(1)
 
-        else:
-            tracking = None
+        except Exception as e:
+            print(f"[THREAD] Erreur inattendue : {e}")
+            time.sleep(1)
+
 
 def recenter():
     global s, pwi4, c, mount_connected, ra, dec, target_az, tol, keep_alive, tracking, outputs, current_az
@@ -183,6 +194,13 @@ class Ui(Tk):
 
         self.title("Controle coupole")
 
+        # --- Bouton Quitter ---
+        self.button_quit = Button(self, text="Quitter", **default_button_style, command=self.on_close)
+        self.button_quit.grid(column=1, row=6, padx=10, pady=20, sticky="nsew")
+
+        # Associe la fermeture fenêtre (croix) à la même méthode
+        self.protocol("WM_DELETE_WINDOW", self.on_close)
+
     def update_ui(self):
         self.step_cupola.config(text=f"Step: {c.step} Home: {c.home}")
         if c.connected:
@@ -236,6 +254,25 @@ class Ui(Tk):
         c.set_track_flag(False)
         c.set_home()
 
+    def on_close(self):
+        """Arrêt propre du programme : thread, série, fenêtre."""
+        global keep_alive
+        print("[UI] Fermeture demandée...")
+        keep_alive = False
+
+        # Ferme la connexion série proprement
+        try:
+            if c.connected:
+                print("[UI] Déconnexion de la coupole...")
+                c.disconnect()
+        except Exception as e:
+            print(f"[UI] Erreur lors de la déconnexion : {e}")
+
+        # Ferme la fenêtre
+        self.destroy()
+        print("[UI] Fenêtre fermée proprement.")
+
+
 
 ref_azimuth = 177.
 target_az = 180.0
@@ -259,7 +296,10 @@ t = threading.Thread(target=worker)
 window = Ui()
 
 keep_alive = True
+t = threading.Thread(target=worker, daemon=True)  # ✅ ajout du daemon
 t.start()
 window.after(1000, window.update_ui)
 window.mainloop()
 keep_alive = False
+t.join(timeout=2.0)  # ✅ arrêt propre
+
