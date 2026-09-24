@@ -1,0 +1,5 @@
+# Attention: installer "pyserial", pas "serial" (paquet homonyme sans rapport qui
+# casse "import serial"). En cas de doute: pip uninstall serial pyserial && pip install pyserial
+pyserial>=3.5
+numpy>=1.26
+matplotlib>=3.6

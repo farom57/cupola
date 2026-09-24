@@ -18,7 +18,7 @@ The UI strings and many comments are in French.
 There is no build system, no test suite and no linter.
 
 - Firmware: open `cupola/cupola.ino` in the Arduino IDE, or `arduino-cli compile --fqbn arduino:avr:uno cupola` then `arduino-cli upload -p <port> --fqbn arduino:avr:uno cupola`.
-- Python app: `cd python && python main.py`. The modules import each other as siblings, so run it from `python/`. Dependencies: `pyserial`, `numpy`, `matplotlib`, and `tkinter`. PWI4 must be running and serving HTTP on `localhost:8220`.
+- Python app: `cd python && python main.py`. The modules import each other as siblings, so run it from `python/`. Install the dependencies with `pip install -r python/requirements.txt`. `tkinter` also has to be available, since it ships with Python rather than pip. PWI4 must be running and serving HTTP on `localhost:8220`.
 - Firmware by hand: open a serial monitor at 1 000 000 baud and send `?` to list the single-character commands.
 
 ## Architecture
@@ -42,7 +42,7 @@ All the logic is in one `loop()` that runs about every 1 ms:
 
 ### Known firmware/client mismatches
 
-The Python client and the firmware in this repo are currently out of sync. Keep this in mind before assuming either side is correct:
+The Python client and the firmware in this repo are currently out of sync. Keep this in mind before assuming either side is correct. `TODO.md` tracks these issues and the pending hardware checks, so update it when you resolve one:
 - The client sends `k` / `k0` / `k1` (tracking flag) and `p` (outputs), but the firmware doesn't implement them. The tracking button therefore never gets a numeric reply.
 - `STEPS_PER_TURN = 692` in Python, but `TOTAL_STEPS = 48` in the firmware (a comment there says `4320`).
 - For `t<N>` the firmware prints `delta:<d>` before echoing the target. `Cupola.goto()` reads only the first line, so it gets a non-numeric reply.
