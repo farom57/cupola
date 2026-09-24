@@ -1,9 +1,24 @@
+import errno
+import glob
+import sys
 import time
 import serial
 import serial.tools.list_ports
 import threading  # <-- ajouté
 
 STEPS_PER_TURN = 692
+DEFAULT_PORT = "COM6" if sys.platform == "win32" else "/dev/ttyACM0"
+
+
+def list_ports():
+    """Ports série disponibles, ports USB en premier.
+
+    Sous Linux, masque les /dev/ttyS* fantômes (hwid 'n/a') et ajoute les liens
+    stables /dev/serial/by-id/*, qui ne changent pas d'un branchement à l'autre
+    contrairement à /dev/ttyACM0 ou /dev/ttyUSB0."""
+    ports = [p for p in serial.tools.list_ports.comports() if p.hwid != "n/a"]
+    ports.sort(key=lambda p: p.vid is None)
+    return sorted(glob.glob("/dev/serial/by-id/*")) + [p.device for p in ports]
 
 
 class Cupola(object):
@@ -23,13 +38,14 @@ class Cupola(object):
 
     def connect(self, port=None):
         if port is None:
-            ports = serial.tools.list_ports.comports(include_links=False)
+            ports = list_ports()
             if not ports:
                 print("Aucun port actif")
                 return False
-            port = ports[0].device
+            port = ports[0]
 
         self.ser.port = port
+        self.ser.baudrate = self.baudrate
         self.ser.timeout = 0.1
         self.ser.write_timeout = 0.1
 
@@ -42,13 +58,17 @@ class Cupola(object):
             return True
         except serial.SerialException as e:
             print(f"Connexion impossible ({e})")
+            if getattr(e, "errno", None) == errno.EACCES and sys.platform != "win32":
+                print("  -> Accès refusé : ajouter l'utilisateur au groupe dialout "
+                      "(sudo usermod -aG dialout $USER) puis se reconnecter")
             self.connected = False
             return False
 
     def disconnect(self):
-        if self.ser.is_open:
-            self.ser.close()
-        self.connected = False
+        with self.lock:  # peut être appelé depuis l'UI pendant que le worker utilise le port
+            if self.ser.is_open:
+                self.ser.close()
+            self.connected = False
 
     # ---------- Lecture protégée ----------
 
